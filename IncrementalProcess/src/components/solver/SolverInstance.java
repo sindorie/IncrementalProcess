@@ -11,7 +11,6 @@ public class SolverInstance {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
 	}
 	public static boolean solve(String... statements){
 		return yices.solve(statements);

@@ -1,12 +1,12 @@
 package ignored;
 
+import ignored.DeviceManager.DeviceBundle;
+
 import com.android.ddmlib.IDevice;
 import com.android.hierarchyviewerlib.device.DeviceBridge;
 import com.android.hierarchyviewerlib.device.WindowUpdater;
 import com.android.hierarchyviewerlib.models.ViewNode;
 import com.android.hierarchyviewerlib.models.Window;
-
-import components.system.DeviceManager.DeviceBundle;
 
 //might want to extend AbstractHvDevice
 public class ViewDeviceInformaion {

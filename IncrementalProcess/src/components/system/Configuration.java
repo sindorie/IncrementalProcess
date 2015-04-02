@@ -5,6 +5,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.xml.parsers.*;
 import javax.xml.transform.*;
@@ -18,22 +19,34 @@ public class Configuration {
 	public final static String TAG = "Configuration";
 	
 	private static Map<String,String> att;
+	private static Element doc;
 	private static String fileName = "configuraion.txt";
 	public final static String attADB = "adb";
+	public final static String attYics = "yices";
 	private final static String rootTag = "cong";
 	
 	static{
 		att = new HashMap<String,String>();
 		File f = new File(fileName);
 		if(!f.exists()){
+			att.put(attADB, "adb");
+			att.put(attYics, "libs/yices");
 			writeXML();
 		}
 		readXML();
 	}
 	
-	
 	public static String getValue(String key){
-		return att.get(key);
+		String result = att.get(key);
+		if(result == null){
+			String val = getTextValue(null, doc, key);          
+			if(val != null){
+				att.put(key, val);
+			}
+			return val;
+		}else{
+			return result;
+		}
 	}
 	
 	private static boolean readXML(){
@@ -46,10 +59,14 @@ public class Configuration {
             // parse using the builder to get the DOM mapping of the    
             // XML file
             dom = db.parse(fileName);
-            Element doc = dom.getDocumentElement();
-            String val = getTextValue(null, doc, attADB);            
-            if(val == null) return false;
-            att.put(attADB, val);
+            doc = dom.getDocumentElement();
+            String adbVal = getTextValue(null, doc, attADB);            
+            if(adbVal == null) return false;
+            att.put(attADB, adbVal);
+            
+            String yicesVal = getTextValue(null, doc, attYics);    
+            if(yicesVal == null) return false;
+            att.put(attYics, yicesVal);
             
             return true;
         } catch (ParserConfigurationException pce) {
@@ -78,10 +95,12 @@ public class Configuration {
 	        Element rootEle = dom.createElement(rootTag);
 
 	        // create data elements and place them under root
-	        e = dom.createElement(attADB);
-	        e.appendChild(dom.createTextNode(attADB));
-	        rootEle.appendChild(e);
-
+	        for( Entry<String, String> entry : att.entrySet()){
+	        	e = dom.createElement(entry.getKey());
+	        	e.appendChild(dom.createTextNode(entry.getValue()));
+	        	rootEle.appendChild(e);
+	        }
+	        
 	        dom.appendChild(rootEle);
 
 	        try {

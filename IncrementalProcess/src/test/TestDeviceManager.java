@@ -3,8 +3,8 @@
  */
 package test;
 
-import components.system.DeviceManager;
-import components.system.DeviceManager.DeviceBundle;
+import ignored.DeviceManager;
+import ignored.DeviceManager.DeviceBundle;
 
 /**
  * @author zhenxu

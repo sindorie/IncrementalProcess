@@ -29,13 +29,10 @@ public class testYices {
 	}
 	
 	static void terminalTest() throws IOException, InterruptedException{
-		
 		Process p = Runtime.getRuntime().exec(path);
 		InputStream errorChannel = p.getErrorStream();
 		InputStream readChannel = p.getInputStream();
 		OutputStream writeChannel = p.getOutputStream();
-		
-		
 		String[] toWrite = {
 				"(define x::int)",
 				"(define y::int)",

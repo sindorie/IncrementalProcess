@@ -1,16 +1,24 @@
 package test;
 
+import java.util.List;
 import java.util.Scanner;
 
 import javax.swing.JFrame;
 import javax.swing.JTree;
 import javax.swing.tree.DefaultTreeModel;
 
+import staticFamily.StaticApp;
+import symbolic.PathSummary;
+import symbolic.SymbolicExecution;
+import analysis.StaticInfo;
 import components.LayoutNode;
 import components.ViewDeviceInfo;
 
-public class TestViewDeviceInfo {
-	public static void main(String[] args) {
+public class PreviousTestBundle {
+
+	
+	
+	static void testDeviceInfo(){
 		String serial = 
 //				"08563207";
 			"192.168.56.102:5555";
@@ -48,5 +56,11 @@ public class TestViewDeviceInfo {
 			}
 		}
 		sc.close();
+	}
+	
+	static void testSymbolic(String path, String sig) {
+		StaticApp app = StaticInfo.initAnalysis(path, false);
+		SymbolicExecution se = new SymbolicExecution(app);
+		List<PathSummary> sum = se.doFullSymbolic(sig);
 	}
 }

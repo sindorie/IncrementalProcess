@@ -1,5 +1,7 @@
 package ignored;
 
+import ignored.DeviceManager.DeviceBundle;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -15,11 +17,9 @@ import components.BasicMatcher;
 import components.Event;
 import components.EventDeposit;
 import components.EventDeposit.InternalPair;
-import components.system.DeviceManager;
 import components.system.InformationCollector;
 import components.system.LogcatReader;
 import components.system.WindowInformation;
-import components.system.DeviceManager.DeviceBundle;
 import components.system.WindowOverview;
 import components.EventFactory;
 import components.EventResultBundle;

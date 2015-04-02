@@ -1,4 +1,4 @@
-package components.system;
+package ignored;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,6 +10,7 @@ import com.android.ddmlib.IDevice;
 import com.android.hierarchyviewerlib.device.DeviceBridge;
 import com.android.hierarchyviewerlib.device.HvDeviceFactory;
 import com.android.hierarchyviewerlib.device.IHvDevice;
+import components.system.Configuration;
 
 public class DeviceManager {
 	public final static String TAG = "DeviceManager";

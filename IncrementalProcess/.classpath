@@ -7,8 +7,6 @@
 	<classpathentry kind="lib" path="libs/jgrapht-core-0.9.0.jar"/>
 	<classpathentry kind="lib" path="libs/jgrapht-ext-0.9.0.jar"/>
 	<classpathentry kind="lib" path="libs/android.jar"/>
-	<classpathentry kind="lib" path="libs/hierarchyviewer2.jar"/>
-	<classpathentry kind="lib" path="libs/hierarchyviewer2lib.jar"/>
 	<classpathentry kind="lib" path="libs/ddmlib.jar"/>
 	<classpathentry kind="lib" path="libs/guava-16.0.jar"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/4"/>

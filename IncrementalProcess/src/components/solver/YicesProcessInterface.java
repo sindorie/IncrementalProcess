@@ -4,17 +4,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import components.system.Configuration;
+
 import support.Logger;
 
-
 public class YicesProcessInterface implements ProblemSolver {
-	public final static String TAG = "YicesProcessInterface";
-	
-	public static String yicesLocation = "/home/zhenxu/Tools/Solver/yices-2.2.2/bin/yices";
+	public static String yicesLocation = Configuration.getValue(Configuration.attYics);
 	private Process yicesProcess;
 	private InputStream readChannel, errorChannel;
 	private OutputStream writeChannel;
-	private long maxtime = 1000 * 30; // 1min
+	private long maxtime = 1000 * 20; // 20s
 	private String path;
 	private boolean newProcess = true;
 	
