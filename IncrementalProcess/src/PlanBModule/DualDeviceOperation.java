@@ -218,8 +218,8 @@ public class DualDeviceOperation extends AbstractExuectionOperation {
 			 * event as the destination is uncertain.
 			 * 
 			 */
-			List<List<String>> methodRootIndex_hitline_pair = bpReader.readExecLog();
-			for(List<String> hitList : methodRootIndex_hitline_pair){
+			List<List<String>> logSequences = bpReader.readExecLog();
+			for(List<String> hitList : logSequences){
 				Logger.debug(hitList);
 			}
 			
@@ -229,7 +229,7 @@ public class DualDeviceOperation extends AbstractExuectionOperation {
 			 * Such list can be mapped to a summary.
 			 */
 			for (int methodRoot_index = 0; methodRoot_index < methodRoots.size(); methodRoot_index++) {
-				List<String> hitLines = methodRootIndex_hitline_pair.get(methodRoot_index);
+				List<String> hitLines = logSequences.get(methodRoot_index);
 				List<WrappedSummary> summary_candidatelist = mappedSummaryCandidates.get(methodRoot_index);
 				int matchedIndex = matcher.matchSummary(hitLines, WrappedSummary.unwrapSummary(summary_candidatelist));
 				
@@ -289,28 +289,6 @@ public class DualDeviceOperation extends AbstractExuectionOperation {
 				majorBranchIndex = 0;
 				mappedSummaries = result; 
 			}
-			
-			
-//			WrappedSummary onCreateSum = findBestCandidateForLaunching(mappedSummaryCandidates, methodRoots, "onCreate(");
-//			if(onCreateSum == null){ 
-//				Logger.info("Cannot find onCreate method");
-//				Logger.info("Method Root List: "+methodRoots);
-//			}else{ result.add(onCreateSum); }
-//		
-//			WrappedSummary onStartSum = findBestCandidateForLaunching(mappedSummaryCandidates, methodRoots, "onStart(");
-//			if(onCreateSum == null){ Logger.debug("Cannot find onStart method");
-//			}else{ result.add(onStartSum); }
-//			
-//			WrappedSummary onResumeSum = findBestCandidateForLaunching(mappedSummaryCandidates, methodRoots, "onResume(");
-//			if(onCreateSum == null){ Logger.debug("Cannot find onResume method");
-//			}else{ result.add(onResumeSum); }
-//			
-//			if(result.size() <= 0){
-//				majorBranchIndex = -1;
-//			}else{
-//				majorBranchIndex = 0;
-//				mappedSummaries = result; 
-//			}
 		}
 		
 		//TODO under constructing : there seems to be some problem in terms of selecting
@@ -366,16 +344,16 @@ public class DualDeviceOperation extends AbstractExuectionOperation {
 		 * the jdb should be set up in accordance of the logcat feedback
 		 * The resulted feedback 
 		 */
-		this.logcatReader.clearLogcat();
-		this.viewDeviceExecuter.applyEvent(toValidate.getEvent());
-		List<String> feedBack = this.logcatReader.readLogcatFeedBack();
-		List<DefaultMutableTreeNode> methodIOTree = logcatReader.buildMethodCallTree(feedBack);
-		List<String> methodRoots = logcatReader.getMethodRoots(methodIOTree);
-		
-		
-		bpReader.setup(app,methodRoots);
-		this.jdbDeviceExecuter.applyEvent(toValidate.getEvent());
-		List<List<String>> methodRootIndex_hitline_pair = bpReader.readExecLog();
+//		this.logcatReader.clearLogcat();
+//		this.viewDeviceExecuter.applyEvent(toValidate.getEvent());
+//		List<String> feedBack = this.logcatReader.readLogcatFeedBack();
+//		List<DefaultMutableTreeNode> methodIOTree = logcatReader.buildMethodCallTree(feedBack);
+//		List<String> methodRoots = logcatReader.getMethodRoots(methodIOTree);
+//		
+//		boolean comparionResult = false;
+//		bpReader.setup(app,methodRoots);
+//		this.jdbDeviceExecuter.applyEvent(toValidate.getEvent());
+//		List<List<String>> methodRootIndex_hitline_pair = bpReader.readExecLog();
 		
 		/*
 		 * Successful Scenario:
@@ -393,46 +371,23 @@ public class DualDeviceOperation extends AbstractExuectionOperation {
 		
 		
 		
-		//TODO under construction
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
+		//TODO this is only a compromised implementation.
+
+
+		this.jdbDeviceExecuter.applyEvent(toValidate.getEvent(), false);
+		this.viewDeviceExecuter.applyEvent(toValidate.getEvent());
+		bpReader.setup(app, toValidate.getMethodRoots());
+
+		List<List<String>> methodRootIndex_hitline_pair = bpReader.readExecLog();
+		// do linear comparison with the major branch.
+		WrappedSummary majorBranch = toValidate.getMajorBranch();
 		boolean comparionResult = false;
-		
-		
-		
-//		bpReader.setup(app, toValidate.getMethodRoots());
-//		
-//		this.jdbDeviceExecuter.applyEvent(toValidate.getEvent());
-//		List<List<String>> methodRootIndex_hitline_pair = bpReader.readExecLog();
-//		// do linear comparison with the major branch.
-//		WrappedSummary majorBranch = toValidate.getMajorBranch();
-//		boolean comparionResult = false;
-//		for (List<String> methodHits : methodRootIndex_hitline_pair) {
-//			comparionResult |= matcher.compareBPRecords(methodHits,
-//					majorBranch.summaryReference.getExecutionLog());
-//			if (comparionResult)
-//				break;
-//		}
+		for (List<String> methodHits : methodRootIndex_hitline_pair) {
+			comparionResult |= matcher.compareBPRecords(methodHits,
+					majorBranch.summaryReference.getExecutionLog());
+			if (comparionResult)
+				break;
+		}
 
 		if (comparionResult) {
 			Logger.debug("found path summary");
@@ -648,5 +603,6 @@ public class DualDeviceOperation extends AbstractExuectionOperation {
 				pkgName, app.getInstrumentedApkPath()));
 		this.currentLayout = GraphicalLayout.Launcher;
 	}
+
 
 }

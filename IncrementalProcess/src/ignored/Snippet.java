@@ -101,3 +101,24 @@ public class Snippet {
 //	if(readThread.isAlive()){ readThread.interrupt(); }
 }
 
+//WrappedSummary onCreateSum = findBestCandidateForLaunching(mappedSummaryCandidates, methodRoots, "onCreate(");
+//if(onCreateSum == null){ 
+//	Logger.info("Cannot find onCreate method");
+//	Logger.info("Method Root List: "+methodRoots);
+//}else{ result.add(onCreateSum); }
+//
+//WrappedSummary onStartSum = findBestCandidateForLaunching(mappedSummaryCandidates, methodRoots, "onStart(");
+//if(onCreateSum == null){ Logger.debug("Cannot find onStart method");
+//}else{ result.add(onStartSum); }
+//
+//WrappedSummary onResumeSum = findBestCandidateForLaunching(mappedSummaryCandidates, methodRoots, "onResume(");
+//if(onCreateSum == null){ Logger.debug("Cannot find onResume method");
+//}else{ result.add(onResumeSum); }
+//
+//if(result.size() <= 0){
+//	majorBranchIndex = -1;
+//}else{
+//	majorBranchIndex = 0;
+//	mappedSummaries = result; 
+//}
+

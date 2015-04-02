@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <cong>
-    <yices>libs/yices</yices>
+    <yices>/home/zhenxu/Tools/Solver/yices-2.2.2/bin/yices</yices>
     <adb>adb</adb>
     <sample>this is a sample</sample>
 </cong>

@@ -15,6 +15,7 @@ import javax.swing.BoxLayout;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JTabbedPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.border.TitledBorder;
@@ -41,6 +42,10 @@ public class DepthFirstManager extends AbstractExecutionManger{
 	private int maxIndividualValidationTry = 5;
 	private EventSummaryPair currentESPair;
 	private Map<String, Boolean> reachedTargets = new HashMap<String, Boolean>();
+	private Map<String, JTextArea> targetAreas = new HashMap<String, JTextArea>(); 
+//	private Map<String, List<EventSummaryPair>> targetSummaryCandidate = new HashMap<String, List<EventSummaryPair>>();
+	
+	
 	
 	private DefaultTableModel newEventModel, executedEventModel, 
 			validationModel, targetSummmaryModel, targetModel;
@@ -161,6 +166,8 @@ public class DepthFirstManager extends AbstractExecutionManger{
 					return super.remove(index);
 				}
 			};
+			
+			
 		}
 	}
 	
@@ -173,9 +180,20 @@ public class DepthFirstManager extends AbstractExecutionManger{
 		target_index = 0;
 		for(String line : methodSignature){
 			reachedTargets.put(line, false);
+//			targetSummaryCandidate.put(line, new ArrayList<EventSummaryPair>());
 		}
-		
 		updateTargetListTable();
+		
+		if(this.enableGUI){
+			JTabbedPane jtp = new JTabbedPane();
+			for(String line : methodSignature){
+				JScrollPane jsp = new JScrollPane();
+				JTextArea area = new JTextArea();
+				jsp.setViewportView(area);
+				jtp.add(line, jsp);
+			}
+			Logger.registerJPanel("Target", jtp);
+		}
 	}
 	
 	@Override
@@ -241,13 +259,27 @@ public class DepthFirstManager extends AbstractExecutionManger{
 				Logger.info(exPair.toString());
 			}
 			for(EventSummaryPair esPair : toValidateList){
+//				boolean shouldBeTarget = false;
+//				if(this.targets != null && esPair.getSummaryList() != null){
+//					for(WrappedSummary sum : esPair.getSummaryList()){
+//						for(String line : this.targets){
+//							if(sum.executionLog.contains(line)){
+//								this.targetQueue.add(e)
+//							}
+//						}
+//					}
+//				}
+//				if(shouldBeTarget == false){
+//					
+//				}
 				validationQueue.add(esPair);
 			}
-			
 		}
 		
+		//Check the last Espair hit any target line
 		EventSummaryPair last = operater.getLastExecutedEvent();
 		checkTargetReachablility(last);
+
 		Logger.trace("Last esPair: "+last);
 	}
 
@@ -305,7 +337,6 @@ public class DepthFirstManager extends AbstractExecutionManger{
 	public boolean isInReachTargetMode() {
 		boolean result = target_index >= 0 && !isInExplorationMode() && 
 						periodExpansionTryCount >= expansionPeriod;
-				
 		Logger.trace(result+"");
 		return result;
 	}
@@ -318,12 +349,23 @@ public class DepthFirstManager extends AbstractExecutionManger{
 
 	@Override
 	public EventSummaryPair getNextTargetSummary() {
-		return this.targetQueue.remove(0);//TODO
+		return targetQueue.get(0);
+//		if(this.target_index >= 0 && target_index < this.targets.length){
+//			
+//			
+//			
+//			return this.//TODO
+//		}else{
+//			return null;
+//		}
 	}
 	
 	@Override
 	public void onReachTargetEnd() {
-		checkTargetReachablility(operater.getLastExecutedEvent());
+		boolean isReached = checkTargetReachablility(operater.getLastExecutedEvent());
+		if(isReached){
+			targetQueue.remove(0);
+		}
 		Logger.trace();
 	}
 	
@@ -340,13 +382,29 @@ public class DepthFirstManager extends AbstractExecutionManger{
 	 * @return
 	 */
 	public boolean isFinished() {
-		if(isLimitReached()){
-			return true;
-		}else if(this.target_index < 0){
-			return !this.isInExpansionMpde() && !this.isInExplorationMode();
-		}else{
-			return this.target_index >= this.targets.length;
-		}
+		
+		return !this.isInExpansionMpde() && !this.isInExplorationMode();
+		
+//		if(isLimitReached()){
+//			return true;
+//		}else if(this.target_index < 0){
+//			return !this.isInExpansionMpde() && !this.isInExplorationMode();
+//		}else{
+//			boolean queneEmpty = this.targetQueue.isEmpty();
+//			
+//			
+//			for(Entry<String, Boolean> entry : reachedTargets.entrySet()){
+//				if(entry.getValue()){ //reached
+//					
+//				}else{ //not reached 
+//					this.targetQueue.isEmpty()
+//					
+//				}
+//			}
+//			
+//			
+//			return this.target_index >= this.targets.length;
+//		}
 	}
 
 
@@ -393,22 +451,22 @@ public class DepthFirstManager extends AbstractExecutionManger{
 	 * Check the execution log in the executed summary if any target line is hit
 	 * @param executed
 	 */
-	private void checkTargetReachablility(EventSummaryPair executed){
-		if(this.target_index < 0) return;
+	private boolean checkTargetReachablility(EventSummaryPair executed){
+		if(this.target_index < 0) return false;
 		//check if any summary which is just executed contains any target line
 		List<WrappedSummary> sumList = executed.getSummaryList();
-		if(sumList == null) return;
+		if(sumList == null) return false;
 		
 		boolean anyChange = false;
 		for(WrappedSummary sum : sumList){
-			for(String targetLine : targets){
+			for(String targetLine : targets){//check any targe line is hit
 				if(sum.executionLog.contains(targetLine)){
 					reachedTargets.put(targetLine, true);
-					anyChange = true;
+					anyChange = true;			
 				}
 			}
 		}
-		
+
 		//update index_targetline
 		int i = this.target_index ;
 		for( ; i < this.targets.length ; i++){
@@ -416,10 +474,12 @@ public class DepthFirstManager extends AbstractExecutionManger{
 			if(this.reachedTargets.get(line) == false) break;
 			target_index += 1;
 		}
-		
-		if(anyChange){
-			updateTargetListTable();
+		if(target_index == this.targets.length){
+			this.target_index = -1;
 		}
+		
+		if(anyChange){ updateTargetListTable(); }
+		return anyChange;
 	}
 	
 	private void updateTargetListTable(){
@@ -430,4 +490,62 @@ public class DepthFirstManager extends AbstractExecutionManger{
 		}
 	}
 	
+//	private class TargeSummaryManager{
+//		Map<String, List<EventSummaryPair>> candidates = new HashMap<String, List<EventSummaryPair>>();
+//		String[] targets;
+//		int total = 0;
+//		int index = 0;
+//		EventSummaryPair lastValidation = null;
+//		
+//		TargeSummaryManager(String[] targets){
+//			this.targets = targets;
+//			for(String line : targets){
+//				candidates.put(line, new ArrayList<EventSummaryPair>());
+//			}
+//		}
+//		
+//		public boolean isAllReached(){
+//			for(List<EventSummaryPair> arr : candidates.values()){
+//				if(arr != null) return false;
+//			}
+//			return true;
+//		}
+//		
+//		public EventSummaryPair getNextTargetSummary(){
+//			EventSummaryPair result = null;
+//			index += 1;
+//			
+//			for(int i=0;i<targets.length;i++){
+//				int j = (index + i)%targets.length;
+//				String line = this.targets[j];
+//				List<EventSummaryPair> arr = candidates.get(line);
+//				if(arr != null && !arr.isEmpty()){
+//					result = arr.remove(0);
+//					break;
+//				}
+//			}
+//			
+//			this.lastValidation = result;
+//			return result;
+//		}
+//		
+//		public boolean containAnyTarget(EventSummaryPair potential){
+//			for(WrappedSummary sum : potential.getSummaryList()){
+//				for(String line : sum.executionLog){
+//					for(String target : this.targets){
+//						if(candidates.get(target) == null) continue;
+//						if(line.equals(target)){
+//							candidates.get(target).add(potential);
+//							return true;
+//						}
+//					}
+//				}
+//			}
+//			return false;
+//		}
+//		
+//		public boolean checkReachability(){
+//			
+//		}
+//	}
 }

@@ -34,8 +34,8 @@ public class EntryPoint {
 		
 		String prefix = "/home/zhenxu/workspace/APK/";
 		String path = 
-//				"Dragon.apk";
-				"TestProcedure.apk";
+				"Dragon.apk";
+//				"TestProcedure.apk";
 //				"Beta1.apk";
 //				"CalcA.apk";
 //		"backupHelper.apk";
@@ -54,8 +54,8 @@ public class EntryPoint {
 		
 		final ExuectionLoop loop = new ExuectionLoop(manager, operater, model);
 		
-		loop.enableCycleBreak(true);
-		
+		//will stop for each cycle if given true
+		loop.enableCycleBreak(false);
 		new Thread(new Runnable(){
 			@Override
 			public void run() {
@@ -73,10 +73,7 @@ public class EntryPoint {
 							loop.nextCycle();
 							
 						}else if(line.equals("4") || line.isEmpty()){
-							
-							
-							
-							
+
 						}else if(line.equals("9")){
 							try {
 								FileOutputStream fout = new FileOutputStream("generated/file");

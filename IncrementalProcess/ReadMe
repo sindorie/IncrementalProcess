@@ -1,0 +1,7 @@
+Whats need to be done before running.
+
+1. Need StaticComponent project
+2. Change value in Paths Class in the StaticComponent if necessary
+3. Change value in configuration.txt in the IncrementalProcess project
+4. Use test/testYices.java to make sure the default Yices program works fine.
+ 
