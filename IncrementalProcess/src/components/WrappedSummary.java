@@ -1,0 +1,349 @@
+package components;
+
+import java.awt.Component;
+import java.awt.Container;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+
+import javax.swing.BoxLayout;
+import javax.swing.DefaultListCellRenderer;
+import javax.swing.DefaultListModel;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JList; 
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTextArea;
+import javax.swing.JTree;
+import javax.swing.ListSelectionModel;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+
+import support.Logger;
+import support.TreeUtility; 
+import symbolic.Expression;
+import symbolic.PathSummary;
+import symbolic.Variable;
+
+public class WrappedSummary {
+	
+	private static boolean enableGUI = true;
+	private static DefaultListModel<PathSummary> model_raw;
+	private static DefaultListModel<WrappedSummary> mode_wrap;
+	private static JComponent rawSummaryPanel, wrappedSumPanel;
+	static{
+		if(enableGUI){
+			rawSummaryPanel = createRawSummaryPanel();
+			wrappedSumPanel = createWrappedSummaryPanel();
+			Logger.registerJPanel("Raw summary", rawSummaryPanel);
+			Logger.registerJPanel("wrapped summary", wrappedSumPanel);
+		}
+	}
+	
+	public final Map<Expression,Expression> symbolicStates = new HashMap<Expression,Expression>();
+	public final List<Expression> constraints = new ArrayList<Expression>();
+	public final List<String> executionLog = new ArrayList<String>();
+	public final PathSummary summaryReference;
+	public final String methodSignature;
+	public boolean isExecuted = false;
+	
+	public WrappedSummary(PathSummary summary){
+		summaryReference = summary;
+		this.preprocessExecutionLog(summary.getExecutionLog());
+		this.preprocessConstraint(summary.getPathConditions());
+		this.preprocessSymbolicStates(summary.getSymbolicStates());
+		this.methodSignature = summary.getMethodSignature();
+		
+		if(enableGUI && summary!=null){ // && !model.contains(summary)
+			model_raw.addElement(summary);
+			mode_wrap.addElement(this);
+		}
+	}
+	
+	public static List<PathSummary> unwrapSummary(List<WrappedSummary> wsList){
+		List<PathSummary> result = new ArrayList<PathSummary>();
+		for(WrappedSummary wsum : wsList){
+			result.add(wsum.summaryReference);
+		}
+		return result;
+	}
+	
+	public static List<WrappedSummary> wrapSummaryList(List<PathSummary> sums){
+		if(sums == null) return null;
+		
+		List<WrappedSummary> sumList = new ArrayList<WrappedSummary>();
+		for(PathSummary sum : sums){
+			sumList.add(new WrappedSummary(sum));
+		}
+		return sumList;
+	}
+	
+	@Override
+	public boolean equals(Object o){
+		if( o instanceof WrappedSummary){
+			WrappedSummary sum = (WrappedSummary)o;
+			return sum.executionLog.equals(this.executionLog);
+		}
+		return false;
+	}
+	
+	@Override
+	public int hashCode(){
+		//TODO may not be considered as correct in the future
+		return this.executionLog.size();
+	}
+	
+	@Override
+	public String toString(){
+		return this.executionLog.toString();
+	}
+	
+	public String toFormatedString(){
+		StringBuilder sb = new StringBuilder();
+		sb.append("Symbolics:\n");
+		for(Entry<Expression,Expression> entry : symbolicStates.entrySet()){
+			sb.append("\t");
+			sb.append(entry.getKey().toYicesStatement()).append(" = ");
+			sb.append(entry.getValue().toYicesStatement()).append("\n");
+		}
+		sb.append("Variables In Symbolics:\n");
+		for(Entry<Expression,Expression> entry : symbolicStates.entrySet()){
+			sb.append("\t");
+			sb.append(entry.getKey().getUniqueVarSet()).append("\n");
+			sb.append("\t");
+			sb.append(entry.getValue().getUniqueVarSet()).append("\n");
+		}
+		
+		
+		sb.append("Constraints:\n");
+		for(Expression expre : constraints){
+			sb.append("\t");
+			sb.append(expre.toYicesStatement()).append("\n");
+		}
+		sb.append("Variables in Constraints:\n");
+		for(Expression expre : constraints){
+			sb.append("\t");
+			sb.append(expre.getUniqueVarSet()).append("\n");
+		}
+		
+		sb.append("Execution Log:\n");
+		sb.append("\t");
+		sb.append(executionLog.toString()).append("\n");
+		
+		sb.append("IsExecuted: ").append(isExecuted).append("\n");
+		return sb.toString();
+	}
+	
+	private void preprocessConstraint(List<Expression> cons){
+		this.constraints.addAll(ExpressionTranfomator.transform(cons));
+	}
+	
+	private void preprocessSymbolicStates(List<Expression> inputs){
+		List<Expression> syms = ExpressionTranfomator.transform(inputs);
+		for(Expression symPair : syms){
+			if(symPair.getChildCount() != 2){
+				System.out.println("preprocess Symbolic States with "+symPair.toYicesStatement());
+				continue;
+			}
+			Expression left = (Expression)symPair.getChildAt(0);
+			Expression right = (Expression)symPair.getChildAt(1);
+			this.symbolicStates.put(left.clone(), right.clone());
+		}
+	}
+	
+	private void preprocessExecutionLog(List<String> logs){
+		this.executionLog.addAll(logs);
+	}
+	
+	
+	private static JComponent createRawSummaryPanel(){
+		model_raw = new DefaultListModel<PathSummary>();
+		
+		final JList<PathSummary> leftList = new JList<PathSummary>();
+		leftList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		leftList.setModel(model_raw);
+		leftList.setCellRenderer(new DefaultListCellRenderer() {
+		    @Override
+		    public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+		        JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+		        label.setText("PathSummary #"+index);
+		        return label;
+		    }
+		});
+		JScrollPane leftScroll = new JScrollPane();
+		leftScroll.setViewportView(leftList);
+		
+		
+		final Container rightSummaryContainer = new Container();
+		BoxLayout layout = new BoxLayout(rightSummaryContainer, BoxLayout.Y_AXIS);
+		rightSummaryContainer.setLayout(layout);
+		JScrollPane rightContainer = new JScrollPane();
+		rightContainer.setViewportView(rightSummaryContainer);
+		
+		leftList.addListSelectionListener(new ListSelectionListener(){
+			PathSummary previous = null;
+			@Override
+			public void valueChanged(ListSelectionEvent e) {
+				if(!e.getValueIsAdjusting()){
+				
+					PathSummary sum = leftList.getSelectedValue();
+					if(sum!= null && previous != sum){
+						previous = sum;
+						
+						rightSummaryContainer.removeAll();
+						
+						rightSummaryContainer.add(new JLabel("Signature:"+sum.getMethodSignature()));					
+						
+						String toShow = String.join("\n", sum.getExecutionLog());
+						JTextArea area = new JTextArea();
+						area.setText(toShow);
+						rightSummaryContainer.add(area);
+						
+						rightSummaryContainer.add(new JLabel(String.format("Constraints: ")));
+						for(Expression expre : sum.getPathConditions()){
+							rightSummaryContainer.add(new JLabel("<html>"+expre.toYicesStatement()+"</html>"));
+							JTree tree = new JTree(expre);
+							rightSummaryContainer.add(tree);
+							TreeUtility.expandJTree(tree, -1);
+						}
+						rightSummaryContainer.add(new JLabel(String.format("Constraints variables: ")));
+						for(Expression expre : sum.getPathConditions()){
+							Set<Variable> vars = expre.getUniqueVarSet();
+							for(Variable var : vars){
+								JLabel varLabel = new JLabel(var.toVariableDefStatement());
+								rightSummaryContainer.add(varLabel);
+							}
+						}
+						
+						rightSummaryContainer.add(new JLabel(String.format("Symbolic states:")));
+						for(Expression expre : sum.getSymbolicStates()){
+							rightSummaryContainer.add(new JLabel("<html>"+expre.toYicesStatement()+"</html>"));
+							JTree tree = new JTree(expre);
+							rightSummaryContainer.add(tree);
+							TreeUtility.expandJTree(tree, -1);
+						}
+						rightSummaryContainer.add(new JLabel(String.format("Symbolic variables: ")));
+						for(Expression expre : sum.getSymbolicStates()){
+							Set<Variable> vars = expre.getUniqueVarSet();
+							for(Variable var : vars){
+								JLabel varLabel = new JLabel(var.toVariableDefStatement());
+								rightSummaryContainer.add(varLabel);
+							}
+						}
+						
+						rightSummaryContainer.revalidate();
+					}
+				}
+			}
+		});
+		
+		final JSplitPane topSpliter = new JSplitPane(
+				JSplitPane.HORIZONTAL_SPLIT,
+				leftScroll, rightContainer );
+        topSpliter.setOneTouchExpandable(true);
+        topSpliter.setDividerLocation(150);
+		
+		return topSpliter;
+	}
+	
+	private static JComponent createWrappedSummaryPanel(){
+		mode_wrap = new DefaultListModel<WrappedSummary>();
+		
+		final JList<WrappedSummary> wSumList = new JList<WrappedSummary>();
+		wSumList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		wSumList.setModel(mode_wrap);
+		wSumList.setCellRenderer(new DefaultListCellRenderer() {
+		    @Override
+		    public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+		        JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+		        label.setText("Wrapped PathSummary #"+index);
+		        return label;
+		    }
+		});
+		JScrollPane leftScroll = new JScrollPane();
+		leftScroll.setViewportView(wSumList);
+		
+		final Container rightSummaryContainer = new Container();
+		BoxLayout layout = new BoxLayout(rightSummaryContainer, BoxLayout.Y_AXIS);
+		rightSummaryContainer.setLayout(layout);
+		JScrollPane rightContainer = new JScrollPane();
+		rightContainer.setViewportView(rightSummaryContainer);
+		
+		wSumList.addListSelectionListener(new ListSelectionListener(){
+			WrappedSummary previous = null;
+			@Override
+			public void valueChanged(ListSelectionEvent e) {
+				if(!e.getValueIsAdjusting()){
+				
+				WrappedSummary sum = wSumList.getSelectedValue();
+				if(sum!= null && previous != sum){
+					previous = sum;
+					rightSummaryContainer.removeAll();
+					
+					rightSummaryContainer.add(new JLabel("Signature:"+sum.methodSignature));					
+					
+					String toShow = String.join("\n", sum.executionLog);
+					JTextArea area = new JTextArea();
+					area.setText(toShow);
+					rightSummaryContainer.add(area);
+					
+					rightSummaryContainer.add(new JLabel(String.format("Constraints: ")));
+					for(Expression expre : sum.constraints){
+						rightSummaryContainer.add(new JLabel("<html>"+expre.toYicesStatement()+"</html>"));
+						JTree tree = new JTree(expre);
+						rightSummaryContainer.add(tree);
+						TreeUtility.expandJTree(tree, -1);
+					}
+					rightSummaryContainer.add(new JLabel(String.format("Constraints variables: ")));
+					for(Expression expre : sum.constraints){
+						Set<Variable> vars = expre.getUniqueVarSet();
+						for(Variable var : vars){
+							JLabel varLabel = new JLabel(var.toVariableDefStatement());
+							rightSummaryContainer.add(varLabel);
+						}
+					}
+					
+					rightSummaryContainer.add(new JLabel(String.format("Symbolic states:")));
+					Set<Variable> symVarSet = new HashSet<Variable>();
+					for(Entry<Expression,Expression> entry : sum.symbolicStates.entrySet()){
+						Expression variable = entry.getKey();
+						Expression value = entry.getValue();
+						rightSummaryContainer.add(
+								new JLabel("<html>"+variable.toYicesStatement()+" = "+value.toYicesStatement()+"</html>")
+							);
+						symVarSet.addAll(variable.getUniqueVarSet());
+						symVarSet.addAll(value.getUniqueVarSet());
+						
+						JTree tree = new JTree(value);
+						rightSummaryContainer.add(tree);
+						TreeUtility.expandJTree(tree, -1);
+					}
+					
+					rightSummaryContainer.add(new JLabel(String.format("Symbolic variables: ")));
+					for(Variable expre : symVarSet){
+						JLabel varLabel = new JLabel(expre.toVariableDefStatement());
+						rightSummaryContainer.add(varLabel);
+					}
+					
+					rightSummaryContainer.revalidate();
+				}
+			}
+			}
+			
+		});
+		
+		
+		final JSplitPane topSpliter = new JSplitPane(
+				JSplitPane.HORIZONTAL_SPLIT,
+				leftScroll, rightContainer );
+        topSpliter.setOneTouchExpandable(true);
+        topSpliter.setDividerLocation(150);
+        
+		return topSpliter;
+	}
+}
