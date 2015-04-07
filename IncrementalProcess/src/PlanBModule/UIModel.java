@@ -6,11 +6,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.swing.DefaultListModel;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
 import javax.swing.JTree;
+import javax.swing.ListSelectionModel;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import javax.swing.event.TreeSelectionEvent;
 import javax.swing.event.TreeSelectionListener;
 import javax.swing.tree.DefaultTreeModel;
@@ -58,8 +63,7 @@ public class UIModel {
 	
 	public UIModel() {
 		graph = new ListenableDirectedGraph<GraphicalLayout, EventSummaryPair>(EventSummaryPair.class);
-		
-		
+
 		if(enableGUI){
 			adapter = new JGraphModelAdapter<GraphicalLayout, EventSummaryPair>(graph);
 			jgraph = new JGraph(adapter);
@@ -118,6 +122,46 @@ public class UIModel {
 			});
 			
 			Logger.registerJPanel("UI model", masterSpliter);
+			
+			JSplitPane topEdgePane = new JSplitPane();
+			JList<EventSummaryPair> edgeList = new JList<EventSummaryPair>();
+			JTextArea edgeDetail = new JTextArea();
+
+			DefaultListModel<EventSummaryPair> listModel = new DefaultListModel<EventSummaryPair>();
+			edgeList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+			edgeList.setModel(listModel);
+			edgeList.addListSelectionListener(new ListSelectionListener(){
+				private EventSummaryPair previous = null;
+				@Override
+				public void valueChanged(ListSelectionEvent e) {
+					EventSummaryPair current = edgeList.getSelectedValue();
+					if(current != previous){
+						if(current!=null){
+							edgeDetail.setText(current.toFormatedString());
+						}
+						previous = current;
+					}
+				}
+			});
+			
+			edgeDetail.setEditable(false);
+			
+			JScrollPane edgeListContainer = new JScrollPane();
+			edgeListContainer.setViewportView(edgeList);
+			JScrollPane edgeDetailContainer = new JScrollPane();
+			edgeDetailContainer.setViewportView(edgeDetail);
+			topEdgePane.setLeftComponent(edgeListContainer);
+			topEdgePane.setRightComponent(edgeDetailContainer);
+			
+			Logger.registerJPanel("edge", topEdgePane);
+			
+			edgesReference = new ArrayList<EventSummaryPair>(){
+				@Override
+				public boolean add(EventSummaryPair element){
+					listModel.addElement(element);
+					return super.add(element);
+				}
+			};
 		}
 	}
 	
@@ -140,9 +184,7 @@ public class UIModel {
 			AnchorSolver aSolver = new AnchorSolver(this);
 			aSolver.solve(edge);
 			List<List<Event>> eSeq = aSolver.getResult();
-			if(eSeq == null || eSeq.isEmpty()){
-				return null;
-			}
+			if(eSeq == null || eSeq.isEmpty()){ return null; }
 			list = new SequenceStatus(eSeq, this);
 		}else if(list.needUpdate(this)){
 			AnchorSolver aSolver = new AnchorSolver(this);
@@ -158,11 +200,9 @@ public class UIModel {
 	}
 
 	public void update(EventSummaryPair edge, GraphicalLayout dest) {
-		Logger.trace(edge+" to "+dest+" with summary "+edge.getMajorBranch());
 		GraphicalLayout source = edge.getEvent().getSource();
 		GraphicalLayout resultedLayout = findSameOrAddLayout(dest);
 		if(source.equals(resultedLayout)){
-			Logger.trace("Loop edge");
 			addLoopEdge(source, edge);
 			edge.getEvent().setDest(source);
 		}else{
@@ -208,7 +248,19 @@ public class UIModel {
 	}
 	
 	
-	private GraphicalLayout findSameOrAddLayout(GraphicalLayout layout){
+	public GraphicalLayout findSameOrAddLayout(String actName, LayoutNode node){
+		List<GraphicalLayout> layList = actLayouts.get(actName);
+		if(layList != null){
+			for(GraphicalLayout lay: layList){
+				if(lay.hasTheSmaeLayout(node)) return lay; //It is in the encountered one
+			}
+		}
+		GraphicalLayout newLay = new GraphicalLayout(actName, node);
+		this.onNewLayoutHelper(newLay);
+		return newLay;
+	}
+	
+	public GraphicalLayout findSameOrAddLayout(GraphicalLayout layout){
 		List<GraphicalLayout> layList = actLayouts.get(layout.getActName());
 		if(layList != null){
 			for(GraphicalLayout lay: layList){
@@ -260,27 +312,32 @@ public class UIModel {
 			
 			/*
 			 * generate click event
+			 * TODO improvement: check if the click happens on the same widget
 			 */
 			TreeUtility.breathFristSearch(layout.getRootNode(), new Searcher(){
 				@Override
 				public int check(TreeNode treeNode) {
-					if(treeNode == null){
-						UIUtility.showTree(treeNode);
-					}
-					
+//					if(treeNode == null){ UIUtility.showTree(treeNode); }
+					if(treeNode == null) return Searcher.NORMAL;
 					LayoutNode node = (LayoutNode)treeNode;
 					if(node.isLeaf()){
-						if(node.clickable){ toAdd.add(EventFactory.createClickEvent(layout, node)); }
+						if(node.clickable){ 
+							Event next = EventFactory.createClickEvent(layout, node);
+							if(!toAdd.contains(next)){
+								toAdd.add(next); 
+							}
+						}
 					}else{
 						if(node.getParent() != null && node.getParent().clickable){
-							toAdd.add(EventFactory.createClickEvent(layout, node));
+							Event next = EventFactory.createClickEvent(layout, node);
+							if(!toAdd.contains(next)){
+								toAdd.add(next); 
+							}
 						}
 					}
 					return Searcher.NORMAL;
 				}
 			});
-			
-			
 			eventBuffer = toAdd;
 			Logger.trace(toAdd);
 		}else{
@@ -300,21 +357,22 @@ public class UIModel {
         this.jgraph.revalidate();
 	}
 	
+	/*For the GUI cell location*/
 	private static int posIndex = 1;
 	private int[] getNextPos(){
-		Logger.trace();
-		//assume 800 * 600
-		if(posIndex >= 25){
-			return new int[]{50,50};
+		if(posIndex >= 25){ return new int[]{50,50};
 		}else{
-			int row = posIndex%4;
-			int col = posIndex/10;
+			int row = posIndex%4, col = posIndex/10;
 			posIndex += 1;
 			return new int[]{50+row*300, 50+col*300};
 		}
 	}
 	
 	public class SequenceStatus{
+		public List<List<Event>> sequences = new ArrayList<List<Event>>();
+		public List<List<Event>> triedSequence = new ArrayList<List<Event>>();
+		public int vertexAmount, edgeAmount; //index = 0,
+		
 		public SequenceStatus(List<List<Event>> inputSequence, UIModel model){ 
 			for(List<Event> eS : inputSequence){
 				if(! sequences.contains(eS)){
@@ -324,37 +382,36 @@ public class UIModel {
 			vertexAmount = model.getGraph().vertexSet().size();
 			edgeAmount = model.getGraph().edgeSet().size();
 		}
-		public List<List<Event>> sequences = new ArrayList<List<Event>>();
-		public int index = 0;
-		public int vertexAmount, edgeAmount;
-		
+
+		/**
+		 * Check if there could be an update
+		 * @param model
+		 * @return
+		 */
 		public boolean needUpdate(UIModel model){
-			int tmpVertexAmount = model.getGraph().vertexSet().size();
-			int tmpEdgeAmount = model.getGraph().edgeSet().size();
-			
-			return tmpVertexAmount == vertexAmount && tmpEdgeAmount == edgeAmount;
+			int currentVertexAmount = model.getGraph().vertexSet().size();
+			int currentEdgeAmount = model.getGraph().edgeSet().size();
+			boolean result =  currentVertexAmount != vertexAmount || currentEdgeAmount != edgeAmount;
+			return result;
 		}
 		
 		public void update(List<List<Event>> additionSequences, UIModel model){
 			if(additionSequences!= null){
 				for(List<Event> input : additionSequences){
-					if(!sequences.contains(input)){
+					if(!sequences.contains(input) && !triedSequence.contains(input)){
 						sequences.add(input);
 					}
 				}
 			}
-
 			vertexAmount = model.getGraph().vertexSet().size();
 			edgeAmount = model.getGraph().edgeSet().size();
 		}
 		
 		public List<Event> getNext(){
-			if(sequences != null && index < sequences.size()){
-				List<Event> result = sequences.get(index);
-				index += 1;
-				return result;
-			}
-			return null;
+			if(sequences == null || sequences.isEmpty()) return null;
+			List<Event> result = sequences.remove(0);
+			triedSequence.add(result);
+			return result;
 		}
 	}
 

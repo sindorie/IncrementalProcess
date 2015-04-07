@@ -2,15 +2,19 @@ package PlanBModule;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 import javax.swing.tree.DefaultMutableTreeNode;
 
 import android.view.KeyEvent;
 import staticFamily.StaticApp;
-import support.CommandLine;
 import support.Logger;
+import support.Utility;
+import symbolic.Expression;
 import symbolic.SymbolicExecution;
 import components.BasicMatcher;
 import components.BreakPointReader;
@@ -36,7 +40,7 @@ import components.system.WindowPolicy;
  * @author zhenxu
  *
  */
-public class DualDeviceOperation extends AbstractExuectionOperation { 
+public class DualDeviceOperation extends AbstractOperation { 
 
 	/* 
 	 * Fields for information collection
@@ -49,20 +53,26 @@ public class DualDeviceOperation extends AbstractExuectionOperation {
 	/*
 	 * Fields for data recording
 	 */
-	private EventDeposit deposit;
+	private EventDeposit eventDeposit;
 	private GraphicalLayout currentLayout;
 	private EventSummaryPair lastExecutedEvent;
+	private EventSummaryDeposit eventSummaryDeposit;
 	private List<EventSummaryPair> newValidationEvent;
 	private Map<String, List<WrappedSummary>> methodSigToSummaries;
 	
 	/*
-	 * Miscellaneous fields
+	 * Operation fields
 	 */
 	protected String viewDeviceSerial, jdbDeviceSerial;		//serials of devices
+	private Executer jdbDeviceExecuter, viewDeviceExecuter;	//executers which do the events
+	private SymbolicExecution symbolicExecution;			//generate symbolic information of all methods
+	
+	/*
+	 * Miscellaneous fields
+	 */
 	private Event closeKeyboardEvent; 						//predefined event
 	private LinesSummaryMatcher matcher;					//matcher between line numbers
-	private SymbolicExecution symbolicExecution;			//generate symbolic information of all methods
-	private Executer jdbDeviceExecuter, viewDeviceExecuter;	//executers which do the events
+
 	
 	/**
 	 * @param app -- the application under investigation
@@ -77,7 +87,7 @@ public class DualDeviceOperation extends AbstractExuectionOperation {
 		this.jdbDeviceSerial = jdbDeviceSerial;
 		String adbPath = Configuration.getValue(Configuration.attADB);
 		
-		deposit = new EventDeposit();
+		eventDeposit = new EventDeposit();
 		bpReader = new BreakPointReader(jdbDeviceSerial);
 		viewInfoJDB = new ViewDeviceInfo(jdbDeviceSerial);
 		viewInfoView = new ViewDeviceInfo(viewDeviceSerial);
@@ -86,11 +96,12 @@ public class DualDeviceOperation extends AbstractExuectionOperation {
 		methodSigToSummaries = new HashMap<String, List<WrappedSummary>>();
 		logcatReader = new LogcatReader(viewDeviceSerial, adbPath, "System.out");
 		
-		viewDeviceExecuter = new Executer(viewDeviceSerial, deposit);
+		viewDeviceExecuter = new Executer(viewDeviceSerial, eventDeposit);
 		jdbDeviceExecuter = new Executer(jdbDeviceSerial);
 		symbolicExecution = new SymbolicExecution(app);
 		symbolicExecution.debug = false;
 		matcher = new BasicMatcher();
+		eventSummaryDeposit = new EventSummaryDeposit();
 		
 		closeKeyboardEvent = EventFactory.createCloseKeyboardEvent();
 		currentLayout = null;
@@ -98,10 +109,15 @@ public class DualDeviceOperation extends AbstractExuectionOperation {
 
 	@Override
 	public void onPreparation() {
-		Logger.trace();
+		this.viewDeviceExecuter.enableRecordingEvent(false);
+		
+//		this.jdbDeviceExecuter.applyEvent(EventFactory.CreatePressEvent(GraphicalLayout.Launcher,
+//				KeyEvent.KEYCODE_MENU ));
+//		this.viewDeviceExecuter.applyEvent(EventFactory.CreatePressEvent(GraphicalLayout.Launcher,
+//				KeyEvent.KEYCODE_MENU ));
+		
 		this.jdbDeviceExecuter.applyEvent(EventFactory.CreatePressEvent(GraphicalLayout.Launcher,
 				KeyEvent.KEYCODE_HOME ));
-		this.viewDeviceExecuter.enableRecordingEvent(false);
 		this.viewDeviceExecuter.applyEvent(EventFactory.CreatePressEvent(GraphicalLayout.Launcher,
 				KeyEvent.KEYCODE_HOME ));
 		this.viewDeviceExecuter.enableRecordingEvent(true);
@@ -119,326 +135,183 @@ public class DualDeviceOperation extends AbstractExuectionOperation {
 	}
 
 	@Override
-	public void onExplorationProcess(Event newEvent) {
-		Logger.trace("Event: "+newEvent);
-		Logger.trace("Current: "+this.currentLayout);
-		
+	public void onExplorationProcess(final Event newEvent) {
+		Logger.trace("Event: "+newEvent +" with current layout: "+this.currentLayout);
 		/*
-		 * Check if the current layout is the desired one
-		 * Reposition if necessary, which should take both 
-		 * devices to the desired layout. 
+		 * Check if the current layout is the desired one. Reposition if necessary, 
+		 * which should take both devices to the desired layout. 
 		 */
 		if(!this.currentLayout.equals(newEvent.getSource())){
-			Logger.trace("Needs reposition from "+this.currentLayout+" to "+newEvent.getSource());
 			if (!repositionToLayout(newEvent.getSource())) {
-				//ignore the event upon failure
-				return;
+				return; //ignore the event upon failure -- should not happen 
 			}
 		}
+		ExecutionResult actualResult = executeAndConstruct(newEvent);
+		List<List<WrappedSummary>> premutatedList = Utility.permutate(actualResult.mappedSummaryCandidatesList);
 		
-		logcatReader.clearLogcat();
-		/*
-		 * Logcat reading can be the indication of when the program 
-		 * become stable, which can potentially replace the static 
-		 * thread sleeping.
-		 * 
-		 * Note: There is a static sleep because of the intention
-		 * of letting all logcat feedback ready. 
-		 */
-		this.viewDeviceExecuter.applyEvent(newEvent);
+//		System.out.println("mappedSummaryCandidatesList: "+actualResult.mappedSummaryCandidatesList);
+//		System.out.println("premutatedList: "+premutatedList);
 		
-		/*
-		 * There could be multiple method roots.
-		 * Each root could be mapped to a list of summary. 
-		 */
-		Logger.trace("start reading logcat feedback");
-		List<String> methodRoots = new ArrayList<String>();
-		List<List<WrappedSummary>> mappedSummaryCandidates = new ArrayList<List<WrappedSummary>>();
-		int majorBranchIndex = processLogcatFeedBack(methodRoots, mappedSummaryCandidates);
-		Logger.debug("finish reading logcat feedback, methodRoots: "+methodRoots);
-		Logger.debug("prmary mapped path index: " + majorBranchIndex);
-		Logger.debug("Mapped summary Candidates: " + mappedSummaryCandidates);
-		
-		/*
-		 * Check the Window information, including visible windows, keyboards
-		 * Close the keyboard if necessary.  
-		 * Retrieve the layout information the current visible window is in scope
-		 */
-		Logger.debug("Collects visible window information");
-		WindowOverview winOverview = collector_viewDevice.getWindowOverview();
-		WindowInformation focusedWin = winOverview.getFocusedWindow();
-		int scope = focusedWin.isWithinApplciation(this.app);
-		GraphicalLayout resultedLayout = null;
-		boolean inputMethodVisible = winOverview.isKeyboardVisible();
-		switch (scope) {
-		case WindowInformation.SCOPE_LAUNCHER: {
-			Logger.debug("window is launcher");
-			resultedLayout = GraphicalLayout.Launcher;
-		}break;
-		case WindowInformation.SCOPE_WITHIN: {
-			Logger.debug("window is within the application");
-			resultedLayout = new GraphicalLayout(focusedWin.actName,
-					viewInfoView.loadWindowData());
-			if (inputMethodVisible) { closeKeyboard(); }
-		}break;
-		case WindowInformation.SCOPE_OUT: {
-			Logger.debug("window is outside the application");
-			resultedLayout = new GraphicalLayout(focusedWin.actName, null);
-		}break;
-		}
-
-		
-		/*
-		 * Due to current limitation on implementation (jdb), the lines in 
-		 * the process initialization can not be monitored. Skip the jdb 
-		 * setup for events which starts at launcher. 
-		 * 
-		 * Create event summary pair without concrete execution
-		 */
-		
-		/*
-		 * get the path information if logcat has readings 
-		 */
-		List<WrappedSummary> mappedSummaries = null;
-		if (majorBranchIndex >= 0 && !newEvent.getSource().equals(GraphicalLayout.Launcher)) {
-			Logger.debug("Parimary mapped path: "+ mappedSummaryCandidates.get(majorBranchIndex));
-
-			bpReader.setup(app, methodRoots);
-			this.jdbDeviceExecuter.applyEvent(newEvent);
-			if (inputMethodVisible) {
-				jdbDeviceExecuter.applyEvent(closeKeyboardEvent);
-			}
-			
-			/*
-			 * There could be multiple method roots
-			 * for each method root, there is a list of break point hits
-			 * for each list, try to map it a summary, null if failure. 
-			 * 
-			 * Each event summary symbolically generated should have a cloned
-			 * event as the destination is uncertain.
-			 * 
-			 */
-			List<List<String>> logSequences = bpReader.readExecLog();
-			for(List<String> hitList : logSequences){
-				Logger.debug(hitList);
-			}
-			
-			mappedSummaries = new ArrayList<WrappedSummary>();
-			/*
-			 * For each method root, there is a corresponding list of hit lines
-			 * Such list can be mapped to a summary.
-			 */
-			for (int methodRoot_index = 0; methodRoot_index < methodRoots.size(); methodRoot_index++) {
-				List<String> hitLines = logSequences.get(methodRoot_index);
-				List<WrappedSummary> summary_candidatelist = mappedSummaryCandidates.get(methodRoot_index);
-				int matchedIndex = matcher.matchSummary(hitLines, WrappedSummary.unwrapSummary(summary_candidatelist));
-				
-				if (matchedIndex < 0) { mappedSummaries.add(null); // mapping failure
-				} else { mappedSummaries.add(summary_candidatelist.get(matchedIndex)); }
-			}
-
-			/*
-			 * Only generate validation event for the other branches of the major summary 
-			 * NOTE: TODO this is only a compromised solution
-			 */
-			WrappedSummary selectedMajorBranch = mappedSummaries.get(majorBranchIndex);
-			List<EventSummaryPair> validationCandidates = new ArrayList<EventSummaryPair>();
-			List<WrappedSummary> toValidateSummaries = mappedSummaryCandidates.get(majorBranchIndex);
-			List<String> singular_mathodRoot = new ArrayList<String>();
-			String mRoot = methodRoots.get(majorBranchIndex);
-			singular_mathodRoot.add(mRoot);
-			Logger.debug("MethodRoot of major branch: "+mRoot);
-			Logger.debug("selectedMajorBranch: "+selectedMajorBranch);
-
-			for(WrappedSummary wSum : toValidateSummaries){
-				if(wSum == selectedMajorBranch) continue; //which indicates it was conrete executed
-				Logger.debug("Summary to validate: "+wSum);
-				List<WrappedSummary> singluar = new ArrayList<WrappedSummary>();
-				singluar.add(wSum);
-				EventSummaryPair toValidate = new EventSummaryPair(
-						newEvent.clone(), singluar, 0, singular_mathodRoot);	
-				validationCandidates.add(toValidate);
-			}
-			this.newValidationEvent = validationCandidates;
-			if(validationCandidates != null){
-				for(EventSummaryPair esPair : validationCandidates){
-					Logger.debug("##Candidates: "+esPair.getEvent()+"; sum list: "+esPair.getMajorBranch().methodSignature+"; "+esPair.getMajorBranch().constraints);
-				}
-			}
-		} else {// no method in apk is called
-			Logger.debug("No mapped path summary");
-			this.jdbDeviceExecuter.applyEvent(newEvent);
-			if (inputMethodVisible) {
-				jdbDeviceExecuter.applyEvent(closeKeyboardEvent);
-			}
-		}
-		
-		if(newEvent.getSource().equals(GraphicalLayout.Launcher)){
-			Logger.debug("Event source is launcher");
-			//TODO choose the summary which has the most symbolic result
-			//find onCreate, onStart, onResume -- does not care about onMenuCreation etc. 
-			List<WrappedSummary> result = new ArrayList<WrappedSummary>();
-			for(String method : methodRoots){
-				WrappedSummary mapped = findBestCandidate(mappedSummaryCandidates, methodRoots, method);
-				result.add(mapped);
-			}
-			
-			if(result.size() <= 0){
-				majorBranchIndex = -1;
-			}else{
-				majorBranchIndex = 0;
-				mappedSummaries = result; 
-			}
-		}
-		
-		//TODO under constructing : there seems to be some problem in terms of selecting
-		// summary and creating path-summary
-		
-		Logger.trace("New ESPair: "+newEvent+", "+majorBranchIndex+", "+mappedSummaries);
-		EventSummaryPair esPair = new EventSummaryPair(newEvent, mappedSummaries, majorBranchIndex, methodRoots);
-		/**
-		 * The destination layout of event is set the model as it might find the exisiting one.
-		 */
-		model.update(esPair, resultedLayout);
-		esPair.setConcreateExecuted();
-		
-		lastExecutedEvent = esPair;
-		this.currentLayout = resultedLayout;
+		List<EventSummaryPair> validationCandidate = filterConstructAndDesposit(premutatedList, newEvent, actualResult.methodRoots, actualResult.esPair);
+		this.newValidationEvent = validationCandidate;
+		// no need to check event deposit
+		this.lastExecutedEvent = actualResult.esPair;
+		this.lastExecutedEvent.setConcreateExecuted();
+		this.lastExecutedEvent.increaseTryCount();
+		model.update(lastExecutedEvent, actualResult.resultedLayout); //since this is a new event
+		this.currentLayout = lastExecutedEvent.getEvent().getDest();
+		eventSummaryDeposit.deposit(this.lastExecutedEvent);
 	}	
 
 	@Override
 	public void onExpansionProcess(EventSummaryPair toValidate) {
+		if(toValidate.isConcreateExecuted()) return;
+		if(!this.eventSummaryDeposit.contains(toValidate)){
+			throw new AssertionError();
+		}
+		
 		Logger.debug(toValidate.toString());
 		List<Event> sequence = this.model.solveForEvent(toValidate);
-		Logger.debug(sequence==null? "null":sequence.toString());
-		if (sequence == null || sequence.isEmpty()) return;
+		if (sequence == null){ toValidate.increaseTryCount(); return; } // fail to solve
 		
 		reinstallApplication();
-		int i = 0;
 		WindowOverview winOverview = null;
-		for (; i < sequence.size() - 1; i++) {
+		for (int i = 0 ; i < sequence.size() - 1; i++) {
 			this.viewDeviceExecuter.applyEvent(sequence.get(i),false);
 			this.jdbDeviceExecuter.applyEvent(sequence.get(i));
 			winOverview = collector_jdbDevice.getWindowOverview();
-			// TODO needs to find a way to avoid closing keyboard
-			// when the next event is about enter text
-			boolean inputVisible = winOverview.isKeyboardVisible();
-			if (inputVisible) {
-				closeKeyboard();
-			}
+			while(winOverview == null){
+				winOverview = collector_jdbDevice.getWindowOverview();
+			}//should eventually get the correct one
+			if (winOverview.isKeyboardVisible()) { closeKeyboard(); }
 		}
-//		if (winOverview != null) {
-//			winOverview.getFocusedWindow();
-//		}
-		GraphicalLayout targetLayout = new GraphicalLayout(
-				winOverview.getFocusedWindow().actName,
-				viewInfoJDB.loadWindowData());
+		GraphicalLayout targetLayout = new GraphicalLayout( winOverview.getFocusedWindow().actName, viewInfoJDB.loadWindowData());
 		if (targetLayout.equals(toValidate.getEvent().getSource()) == false) {
-			Logger.debug("unexpected layout");
-			return;
+			Logger.debug("unexpected layout"); return;
 		}
 
-		Logger.debug("ready to try event");
-		/**
-		 * Due to the incompleteness of symbolically generated path summary,
-		 * the jdb should be set up in accordance of the logcat feedback
-		 * The resulted feedback 
-		 */
-//		this.logcatReader.clearLogcat();
-//		this.viewDeviceExecuter.applyEvent(toValidate.getEvent());
-//		List<String> feedBack = this.logcatReader.readLogcatFeedBack();
-//		List<DefaultMutableTreeNode> methodIOTree = logcatReader.buildMethodCallTree(feedBack);
-//		List<String> methodRoots = logcatReader.getMethodRoots(methodIOTree);
-//		
-//		boolean comparionResult = false;
-//		bpReader.setup(app,methodRoots);
-//		this.jdbDeviceExecuter.applyEvent(toValidate.getEvent());
-//		List<List<String>> methodRootIndex_hitline_pair = bpReader.readExecLog();
+		Logger.trace("ready to try event");
+		ExecutionResult result = executeAndConstruct(toValidate.getEvent());
 		
 		/*
-		 * Successful Scenario:
-		 * 1. Perfect match for each path summary. Each execution log can be mapped to a summary
-		 * and vice versa. 
-		 * 2. Semi-perfect match. Each path summary corresponds to a execution log, but not vice 
-		 * versa for all execution logs.
-		 * 3. Imperfect match. An execution log contains the lines from a path summary. 
-		 * Not sure this should be considered correct. (Method Call back)
+		 * Compare the resulted summary with the one to validate
+		 * Those two are considered equal if exactly the same summaries. 
+		 * 
+		 * If the actual execution log contains the log in the input summary,
+		 * then the input summary is discard. 
+		 * 
+		 * Failure in other cases?
+		 * 
+		 * Generate new validation summary the method root contains unexpected one.
+		 * 
+		 * 
+		 * Same, Mixed, contain
+		 * 
+		 * Note: Assuming only the last few method of the actual execution could ever be missing
 		 */
-		
-		
-		
-		//Only the major branch is taken into consideration. .
-		
-		
-		
-		//TODO this is only a compromised implementation.
-
-
-		this.jdbDeviceExecuter.applyEvent(toValidate.getEvent(), false);
-		this.viewDeviceExecuter.applyEvent(toValidate.getEvent());
-		bpReader.setup(app, toValidate.getMethodRoots());
-
-		List<List<String>> methodRootIndex_hitline_pair = bpReader.readExecLog();
-		// do linear comparison with the major branch.
-		WrappedSummary majorBranch = toValidate.getMajorBranch();
-		boolean comparionResult = false;
-		for (List<String> methodHits : methodRootIndex_hitline_pair) {
-			comparionResult |= matcher.compareBPRecords(methodHits,
-					majorBranch.summaryReference.getExecutionLog());
-			if (comparionResult)
-				break;
+		boolean knownBranchFullyMatches = true;
+		if( result.methodRoots.size() < toValidate.getMethodRoots().size() ){
+			knownBranchFullyMatches = false;
+		}else{
+			for(int i =0;i<toValidate.getMethodRoots().size(); i++){
+				WrappedSummary sum1= toValidate.getSummaryList().get(i);
+				WrappedSummary sum2 = result.esPair.getSummaryList().get(i);
+				//check perfect match for the first few
+				if(sum1 == null){ if(sum2 != null){ knownBranchFullyMatches = false; break; }
+				}else{ if(!sum1.equals(sum2)){ knownBranchFullyMatches = false; break; }}
+			}
 		}
-
-		if (comparionResult) {
-			Logger.debug("found path summary");
-			WindowOverview overview = this.collector_jdbDevice.getWindowOverview();
-			WindowInformation focusedWin = overview.getFocusedWindow();
-			
-			int tryCount = 0;
-			while(focusedWin == null){
-				focusedWin = collector_jdbDevice.getWindowOverview().getFocusedWindow();
-				
-				try { Thread.sleep(200);
-				} catch (InterruptedException e) { }
-				
-				tryCount += 1;
-				if(tryCount >3){
-					System.out.println("Cannot get focused window");
-					CommandLine.requestInput();
+		Logger.trace("knownBranchFullyMatches: "+knownBranchFullyMatches);
+		if(knownBranchFullyMatches){
+			if(result.methodRoots.size() == toValidate.getMethodRoots().size()){
+				Logger.trace("Perfect match");
+				//perfect match
+				toValidate.setConcreateExecuted();
+				toValidate.increaseTryCount();
+				this.model.update(toValidate, result.resultedLayout);
+				this.lastExecutedEvent = toValidate;				
+				this.currentLayout = lastExecutedEvent.getEvent().getDest();
+			}else{
+				Logger.trace("Partial match");
+				//there is missing summaries
+				if(this.eventSummaryDeposit.contains(result.esPair)){
+					//check if the deposit contains it.
+					//does not expect this
+					toValidate.increaseTryCount();
+					EventSummaryPair actualOne = eventSummaryDeposit.checkAndDeposit(result.esPair);
+					actualOne.increaseTryCount();
+					if(actualOne.isConcreateExecuted() == false){
+						this.model.update(actualOne, result.resultedLayout);
+						actualOne.setConcreateExecuted();
+					}
+					this.lastExecutedEvent = actualOne;
+					this.currentLayout = lastExecutedEvent.getEvent().getDest();
+				}else{//this is new as the deposit does not contain it
+					//update first
+					toValidate.increaseTryCount();
+					toValidate.setIgnored();
+					eventSummaryDeposit.deposit(result.esPair);
+					result.esPair.increaseTryCount();
+					model.update(result.esPair, result.resultedLayout);
+					result.esPair.setConcreateExecuted();
+					this.lastExecutedEvent = result.esPair;
+					this.currentLayout = lastExecutedEvent.getEvent().getDest();
+					
+					//create more symbolic
+					List<String> remain = result.methodRoots.subList(toValidate.getMethodRoots().size(), result.methodRoots.size());
+					//create new symbolic summary
+					List<List<WrappedSummary>> listCandidates = this.findSummaryCandidates(remain);
+					List<List<WrappedSummary>> partialPermutation = Utility.permutate(listCandidates);
+					List<EventSummaryPair> permutatedList = new ArrayList<EventSummaryPair>();
+					Set<EventSummaryPair> set = this.eventSummaryDeposit.getSet(toValidate.getEvent());
+					for(int i =0; i< permutatedList.size(); i++){
+						List<WrappedSummary> partial = partialPermutation.get(i);
+						List<WrappedSummary> connected = new ArrayList<WrappedSummary>(toValidate.getSummaryList());
+						connected.addAll(partial);
+						if(result.esPair.hasExactTheSameExecutionLog(connected)) continue;
+						EventSummaryPair candidate = new EventSummaryPair(toValidate.getEvent().clone(),connected, result.methodRoots);
+						if(set.add(candidate)){ permutatedList.add(candidate); }
+					}
+					this.newValidationEvent = permutatedList;
 				}
 			}
-			
-			int scope = focusedWin.isWithinApplciation(this.app);
-			GraphicalLayout resultGUI = null;
-			switch (scope) {
-			case WindowInformation.SCOPE_LAUNCHER: {
-				resultGUI = GraphicalLayout.Launcher;
+		}else{ //less method or mix method
+			//does not generate any new symbolic esPair
+			//assume not new method could occur in the list
+			toValidate.increaseTryCount();
+			EventSummaryPair actualOne = eventSummaryDeposit.checkAndDeposit(result.esPair);
+			actualOne.increaseTryCount();
+			if(actualOne.isConcreateExecuted() == false){
+				this.model.update(actualOne, result.resultedLayout);
+				actualOne.setConcreateExecuted();
 			}
-				break;
-			case WindowInformation.SCOPE_WITHIN: {
-				resultGUI = new GraphicalLayout(focusedWin.actName,
-						this.viewInfoJDB.loadWindowData());
-			}
-				break;
-			case WindowInformation.SCOPE_OUT: {
-				resultGUI = new GraphicalLayout(focusedWin.actName, null);
-			}
-				break;
-			}
-			this.model.update(toValidate, resultGUI);
-			toValidate.setConcreateExecuted();
-			
-			this.currentLayout = resultGUI;
-		} else {// fail
-			Logger.debug("fail to map path summary");
+			this.lastExecutedEvent = actualOne;
+			this.currentLayout = lastExecutedEvent.getEvent().getDest();
 		}
-		
-		lastExecutedEvent = toValidate;
 	}
 
 	@Override
 	public void onFinish() {
-		// Nothing to do at this point
+		Map<Event, Set<EventSummaryPair>> internalDeposit = this.eventSummaryDeposit.getInternalDeposit();
+		int totalValidated = 0, totalPairs = 0;
+		for(Entry<Event, Set<EventSummaryPair>> entry : internalDeposit.entrySet()){
+			Event event = entry.getKey();
+			Set<EventSummaryPair> set = entry.getValue();
+			int validated = 0;
+			Iterator<EventSummaryPair> iter = set.iterator();
+			while(iter.hasNext()){
+				if(iter.next().isConcreateExecuted()){
+					validated += 1;
+				}
+			}
+			System.out.println(event+"; "+validated+" validated / "+set.size());
+			totalValidated += validated;
+			totalPairs += set.size();
+		}
+		
+		System.out.println("Total Events: "+internalDeposit.keySet().size()+" ");
+		System.out.println("Total event path summary pairs: "+totalPairs+" ");
+		System.out.println("Validated: "+totalValidated+" ");	
 	}
 
 	@Override
@@ -451,9 +324,15 @@ public class DualDeviceOperation extends AbstractExuectionOperation {
 
 	@Override
 	public EventSummaryPair getLastExecutedEvent() {
-		return lastExecutedEvent;
+		EventSummaryPair result = lastExecutedEvent;
+		lastExecutedEvent = null;
+		return result;
 	}
 	
+	@Override
+	public List<Event> getLatestSequence() {
+		return this.eventDeposit.getLastestEventSequnce();
+	}
 	
 	/**
 	 * Try to select the best candidate out of the summary candidates for a method
@@ -490,28 +369,42 @@ public class DualDeviceOperation extends AbstractExuectionOperation {
 	 * @param mappedSummaryCandidates -- the mapped summary resides at
 	 * @return
 	 */
-	private int processLogcatFeedBack(List<String> methodRoots, List<List<WrappedSummary>> mappedSummaryCandidates){
+	private void processLogcatFeedBack(List<String> methodRoots, List<List<WrappedSummary>> mappedSummaryCandidates){
 		List<String> feedBack = logcatReader.readLogcatFeedBack();
-		int majorBranchIndex = -1;
 		if (feedBack != null && feedBack.isEmpty() == false) {
 			List<DefaultMutableTreeNode> methodIOTrees = logcatReader.buildMethodCallTree(feedBack);
 			methodRoots.addAll(logcatReader.getMethodRoots(methodIOTrees));
-			for (String methodSig : methodRoots) {
-				Logger.trace("methodSig: "+methodSig);
-				List<WrappedSummary> summaries = methodSigToSummaries.get(methodSig);
-				if (summaries == null) {
-					summaries = WrappedSummary
-							.wrapSummaryList(symbolicExecution.doFullSymbolic(methodSig));
-					methodSigToSummaries.put(methodSig, summaries);
-				}
-				if(summaries == null){
-					summaries = new ArrayList<WrappedSummary>();
-				}
-				mappedSummaryCandidates.add(summaries);
-			}
-			majorBranchIndex = logcatReader.findMajorBranch(methodIOTrees, mappedSummaryCandidates);
+//			for (String methodSig : methodRoots) {
+//				List<WrappedSummary> summaries = methodSigToSummaries.get(methodSig);
+//				if (summaries == null) {
+//					summaries = WrappedSummary
+//							.wrapSummaryList(symbolicExecution.doFullSymbolic(methodSig));
+//					methodSigToSummaries.put(methodSig, summaries);
+//				}
+//				if(summaries == null){
+//					summaries = new ArrayList<WrappedSummary>();
+//				}
+//				mappedSummaryCandidates.add(summaries);
+//			}
+			mappedSummaryCandidates.addAll(findSummaryCandidates(methodRoots));
 		}
-		return majorBranchIndex;
+	}
+	
+	private List<List<WrappedSummary>> findSummaryCandidates(List<String> methods){
+		List<List<WrappedSummary>> listCandidates = new ArrayList<List<WrappedSummary>>();
+		for (String methodSig : methods) {
+			List<WrappedSummary> summaries = methodSigToSummaries.get(methodSig);
+			if (summaries == null) {
+				summaries = WrappedSummary
+						.wrapSummaryList(symbolicExecution.doFullSymbolic(methodSig));
+				methodSigToSummaries.put(methodSig, summaries);
+			}
+			if(summaries == null){
+				summaries = new ArrayList<WrappedSummary>();
+			}
+			listCandidates.add(summaries);
+		}
+		return listCandidates;
 	}
 	
 	private boolean repositionToLayout(GraphicalLayout targetLayout) {
@@ -534,16 +427,12 @@ public class DualDeviceOperation extends AbstractExuectionOperation {
 						viewDeviceExecuter.applyEvent(this.closeKeyboardEvent);
 					}
 				}
-				GraphicalLayout layout = new GraphicalLayout(
-						winOverview.getFocusedWindow().actName,
+				GraphicalLayout layout = model.findSameOrAddLayout(
+						winOverview.getFocusedWindow().actName, 
 						this.viewInfoView.loadWindowData());
-				if (layout.equals(targetLayout)) {
-					return true;
-				}
 				this.currentLayout = layout;
-			}else{
-				Logger.trace("No valid sequence");
-			}
+				if (layout.equals(targetLayout)) { return true; }
+			}else{ Logger.trace("No valid sequence"); }
 		}
 
 		/*
@@ -555,7 +444,7 @@ public class DualDeviceOperation extends AbstractExuectionOperation {
 		Logger.trace("Reposition 2nd phase");
 		this.reinstallApplication();
 		{// try to use the sequence from the event deposit
-			List<Event> sequence = this.deposit.findSequenceToLayout(targetLayout);
+			List<Event> sequence = this.eventDeposit.findSequenceToLayout(targetLayout);
 			Logger.trace("From deposit: "+sequence);
 			if (sequence != null && sequence.isEmpty() == false) {
 				WindowOverview winOverview = null;
@@ -567,13 +456,12 @@ public class DualDeviceOperation extends AbstractExuectionOperation {
 						viewDeviceExecuter.applyEvent(this.closeKeyboardEvent);
 					}
 				}
-				GraphicalLayout layout = new GraphicalLayout(
-						winOverview.getFocusedWindow().actName,
+				
+				GraphicalLayout layout = model.findSameOrAddLayout(
+						winOverview.getFocusedWindow().actName, 
 						this.viewInfoView.loadWindowData());
-				if (layout.equals(targetLayout)) {
-					return true;
-				}
 				this.currentLayout = layout;
+				if (layout.equals(targetLayout)) { return true; }
 			}
 		}
 		Logger.trace("Reposition failure");
@@ -585,7 +473,6 @@ public class DualDeviceOperation extends AbstractExuectionOperation {
 	 * which now is press back event
 	 */
 	private void closeKeyboard() {
-		Logger.trace();
 		this.viewDeviceExecuter.applyEvent(closeKeyboardEvent, false);
 		this.jdbDeviceExecuter.applyEvent(closeKeyboardEvent);
 	}
@@ -604,5 +491,171 @@ public class DualDeviceOperation extends AbstractExuectionOperation {
 		this.currentLayout = GraphicalLayout.Launcher;
 	}
 
+	
+	/**
+	 * Filter when 
+	 * 1. it is the same as given known esPair
+	 * 2. has no constraint which cannot be validated.
+	 * 3. the same pair can be found in the deposit
+	 * 
+	 * Construct the 
+	 * 
+	 * 
+	 * @param potentialCombination
+	 * @param known
+	 * @return
+	 */
+	private List<EventSummaryPair> filterConstructAndDesposit(List<List<WrappedSummary>> potentialCombination, Event event, List<String> methodRoots,  EventSummaryPair known){
+		List<EventSummaryPair> result = new ArrayList<EventSummaryPair>();
+		Set<EventSummaryPair> generatedSet = this.eventSummaryDeposit.getSet(event);
+		if(potentialCombination == null) return null;
+		for(List<WrappedSummary> wrappedList : potentialCombination){
+			boolean hasSameExecutionLog = known.hasExactTheSameExecutionLog(wrappedList);
+			if(hasSameExecutionLog) continue;
+			//must has constraint, otherwise it is pointless to validate
+			EventSummaryPair esPair = new EventSummaryPair(event.clone(), wrappedList, methodRoots);
+			List<Expression> constraints = esPair.getCombinedConstraint();
+			if(constraints == null || constraints.isEmpty()) continue;
+			if(generatedSet.add(esPair)){
+				result.add(esPair);//new one 
+			}
+		}
+		return result;
+	}
+	
+	
+	/**
+	 * Execute the event on both devices. Read logcat and BP hits. 
+	 * Map the result BP hits to a list of path summary.
+	 * Construct an esPair based on collected information. 
+	 * Will not check with the deposit if the summary existed. 
+	 * Does not increase the try count
+	 * Does not set concrete execution
+	 * @param event
+	 * @return
+	 */
+	private ExecutionResult executeAndConstruct(Event event){
+		ExecutionResult result = new ExecutionResult();
+		
+		logcatReader.clearLogcat();
+		/*
+		 * Logcat reading can be the indication of when the program 
+		 * become stable, which can potentially replace the static 
+		 * thread sleeping.
+		 * 
+		 * Note: There is a static sleep because of the intention
+		 * of letting all logcat feedback ready. 
+		 */
+		this.viewDeviceExecuter.applyEvent(event);
+		
+		/*
+		 * There could be multiple method roots.
+		 * Each root could be mapped to a list of summary. 
+		 */
+		List<String> methodRoots = new ArrayList<String>();
+		List<List<WrappedSummary>> mappedSummaryCandidatesList = new ArrayList<List<WrappedSummary>>();
+		processLogcatFeedBack(methodRoots, mappedSummaryCandidatesList);
+		Logger.debug("finish reading logcat feedback, methodRoots: "+methodRoots);
+		Logger.debug("Mapped summary Candidates: " + mappedSummaryCandidatesList);
+		
+		/*
+		 * Check the Window information, including visible windows, keyboards
+		 * Close the keyboard if necessary.  
+		 * Retrieve the layout information the current visible window is in scope
+		 */
+		WindowOverview winOverview = collector_viewDevice.getWindowOverview();
+		WindowInformation focusedWin = winOverview.getFocusedWindow();
+		int scope = focusedWin.isWithinApplciation(this.app);
+		GraphicalLayout resultedLayout = null;
+		boolean inputMethodVisible = winOverview.isKeyboardVisible();
+		switch (scope) {
+		case WindowInformation.SCOPE_LAUNCHER: {
+			Logger.trace("window is launcher");
+			resultedLayout = GraphicalLayout.Launcher;
+		}break;
+		case WindowInformation.SCOPE_WITHIN: {
+			Logger.trace("window is within the application");
+			resultedLayout = new GraphicalLayout(focusedWin.actName,
+					viewInfoView.loadWindowData());
+			if (inputMethodVisible) { closeKeyboard(); }
+		}break;
+		case WindowInformation.SCOPE_OUT: {
+			Logger.trace("window is outside the application");
+			resultedLayout = new GraphicalLayout(focusedWin.actName, null);
+		}break;
+		}
 
+		EventSummaryPair actualPair = null;
+		if(event.getSource().equals(GraphicalLayout.Launcher)){
+			/**
+			 * Cannot get the path information if the event starts from launcher due to 
+			 * current implementation. As a compromise, choose the path summary with the 
+			 * most symbolic states.
+			 */
+			this.jdbDeviceExecuter.applyEvent(event);
+			if (inputMethodVisible) { jdbDeviceExecuter.applyEvent(closeKeyboardEvent); }
+			
+			List<WrappedSummary> mappedSummaryList = new ArrayList<WrappedSummary>();
+			for(String method : methodRoots){
+				WrappedSummary mapped = findBestCandidate(mappedSummaryCandidatesList, methodRoots, method);
+				mappedSummaryList.add(mapped);
+			}
+			
+			actualPair = new EventSummaryPair(event.clone(), mappedSummaryList, methodRoots);
+		}else if(methodRoots.size()>0 && mappedSummaryCandidatesList.size() > 0){
+			/**
+			 * There is method call information. Map them to some summaries and generate validation sequences
+			 */
+			bpReader.setup(app, methodRoots);
+			Thread t = new Thread(new Runnable(){
+				@Override public void run() { jdbDeviceExecuter.applyEvent(event); }
+			});
+			t.start();
+			try { Thread.sleep(400); } catch (InterruptedException e1) { }
+			List<List<String>> logSequences = bpReader.readExecLog();
+			try { t.join(); } catch (InterruptedException e) { e.printStackTrace(); }
+			if (inputMethodVisible) { jdbDeviceExecuter.applyEvent(closeKeyboardEvent); }
+			
+			
+			List<WrappedSummary> mappedList = new ArrayList<WrappedSummary>();
+			for(int i = 0 ; i< mappedSummaryCandidatesList.size() && i< logSequences.size(); i++){
+				List<String> ithLogSequnence = logSequences.get(i);
+				List<WrappedSummary> summaryCandidates = mappedSummaryCandidatesList.get(i);
+				
+				int matchIndex = matcher.matchSummary(ithLogSequnence, WrappedSummary.unwrapSummary(summaryCandidates));
+				if (matchIndex < 0) { mappedList.add(null); // mapping failure
+				} else { mappedList.add(summaryCandidates.get(matchIndex)); }
+			}
+			
+			actualPair = new EventSummaryPair(event.clone(), mappedList, methodRoots);
+//			/*
+//			 * Generate the symbolic event summary pair for the validation
+//			 */
+//			List<List<WrappedSummary>> potentialCombination = Utility.permutate(mappedSummaryCandidatesList);
+//			List<EventSummaryPair> candidates = (filterAndConstruct(potentialCombination, event.clone(), methodRoots, executedSum));
+//			result.validationCandidate = candidates;
+		}else{
+			Logger.trace();
+			/**
+			 * No method call information. Simply do the event
+			 */
+			this.jdbDeviceExecuter.applyEvent(event);
+			if (inputMethodVisible) { jdbDeviceExecuter.applyEvent(closeKeyboardEvent); }
+			actualPair = new EventSummaryPair(event.clone(), null, methodRoots);
+		}
+		
+		result.mappedSummaryCandidatesList = mappedSummaryCandidatesList;
+		result.methodRoots = methodRoots;
+		result.resultedLayout = resultedLayout;
+		result.esPair = actualPair;
+		return result;
+	}
+	
+	private class ExecutionResult{
+		EventSummaryPair esPair;
+		List<List<WrappedSummary>> mappedSummaryCandidatesList;
+		List<String> methodRoots;
+		List<String> executionLog;
+		GraphicalLayout resultedLayout;
+	}
 }

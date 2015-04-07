@@ -15,8 +15,8 @@ public class BasicMatcher implements LinesSummaryMatcher{
 	}
 	
 	public boolean compareBPRecords(List<String> A, List<String> B){
-		System.out.println(A);
-		System.out.println(B);
+//		System.out.println(A);
+//		System.out.println(B);
 		boolean result = true;
 		if (A.size() < 1 || B.size() < 1 || A.size() != B.size()){
 			result = false;
@@ -27,7 +27,7 @@ public class BasicMatcher implements LinesSummaryMatcher{
 				}
 			}
 		}
-		System.out.println("Comparison: "+ result);
+//		System.out.println("Comparison: "+ result);
 		return result;
 	}
 }

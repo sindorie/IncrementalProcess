@@ -1,18 +1,23 @@
 package PlanBModule;
 
+import PlanBModule.AbstractManager.Decision;
 import support.Logger;
 import components.Event;
 import components.EventSummaryPair;
 
 public class ExuectionLoop implements Runnable{
 	private UIModel model;
-	private AbstractExecutionManger manager;
-	private AbstractExuectionOperation operation;
-	private boolean working = true, forzen = false, temp_release = false;
-
+	private AbstractManager manager;
+	private AbstractOperation operation;
+	private CheckCallBack callBack;
+	private boolean working = true;
+	private int iterationCount;
+	private long startTime = -1;
+	private int maxCount = -1;
+	
 	public ExuectionLoop(
-			AbstractExecutionManger manager, 
-			AbstractExuectionOperation operation,
+			AbstractManager manager, 
+			AbstractOperation operation,
 			UIModel model ){
 		this.manager = manager;
 		this.operation = operation;
@@ -21,80 +26,61 @@ public class ExuectionLoop implements Runnable{
 		manager.setOperater(operation);
 		operation.setManager(manager);
 	}
+	
 	@Override
 	public void run() {
+		this.startTime = System.currentTimeMillis();
 		manager.onPreparation();
 		operation.onPreparation();
 		
 		while(working){
-			if(this.forzen){
-				Logger.info("Forzen");
-				while(this.forzen){
-					if(temp_release){
-						Logger.info("Relased");
-						temp_release = false;
-						break;
-					}
-					
-					try { Thread.sleep(500);
-					} catch (InterruptedException e) { }
-				}
-			}
-
+			if(callBack != null){ callBack.onIterationStart(this); }
 			manager.onIterationStepStart();
+			Decision nextOperation = manager.decideOperation();
+			if(callBack != null){ callBack.onDecisionMade(this, nextOperation); }
 			
-			if(manager.isInExplorationMode()){
-				//the program is exploring the UIs
+			if(nextOperation.equals(Decision.EXPLORE)){
 				manager.onExplorationStepStart();
 				Event nextEvent = manager.getNextExplorationEvent();
 				operation.onExplorationProcess(nextEvent);
 				manager.onExplorationStepEnd();
-				
-			}else if(manager.isInExpansionMpde()){
-				//the program is expanding the knowledge on the existing world
+			}else if(nextOperation.equals(Decision.EXPAND)){
 				manager.onExpansionStepStart();
 				EventSummaryPair esPair = manager.getNextExpansionEvent();
 				operation.onExpansionProcess(esPair);
 				manager.onExplorationStepEnd();
-				
-			}else if(manager.isInReachTargetMode()){
-				//the program is trying to reach a target line
+			}else if(nextOperation.equals(Decision.REACHTARGET)){
 				manager.onReachTargetStart();
 				EventSummaryPair target = manager.getNextTargetSummary();
 				operation.onExpansionProcess(target);
 				manager.onReachTargetEnd();
-			}
-			if(manager.isFinished()){
+			}else if(nextOperation.equals(Decision.END)){
 				working = false;
 			}
+			if(callBack != null){ callBack.onOperationFinish(this); }
 			manager.onIterationStepEnd();
+			iterationCount += 1;
+			
+			if(maxCount > 0 && iterationCount > maxCount) break;
 		}
 		
 		operation.onFinish();
 		manager.onFinish();
 	}
-	
-	public void enableCycleBreak(boolean freeze){
-		this.forzen = freeze;
-	}
 
-	public AbstractExecutionManger getManager() {
-		return manager;
-	}
-	public AbstractExuectionOperation getOperation() {
-		return operation;
-	}
-	public UIModel getModel() {
-		return model;
-	}
-	public boolean isWorking() {
-		return working;
-	}
-	public void setWorking(boolean working) {
-		this.working = working;
-	}
+	public AbstractManager getManager() { return manager; }
+	public AbstractOperation getOperation() { return operation; }
+	public UIModel getModel() { return model; }
+	public boolean isWorking() { return working; }
+	public void setWorking(boolean working) { this.working = working; }
+	public void setCheckCallBack(CheckCallBack callBack){ this.callBack = callBack; }
+	public int getIteerationCount(){ return this.iterationCount;}
+	public long getStartTime(){ return this.startTime; }
+	public void setMaxIteration(int max){ maxCount = max; }
 	
-	public void nextCycle(){
-		this.temp_release = true;
+	public interface CheckCallBack{
+		public boolean onIterationStart(ExuectionLoop loop);
+		public void onDecisionMade(ExuectionLoop loop, Decision nextOperation);
+		public void onOperationFinish(ExuectionLoop loop);
 	}
 }

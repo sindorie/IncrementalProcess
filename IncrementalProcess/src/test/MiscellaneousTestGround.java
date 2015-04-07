@@ -1,31 +1,32 @@
 package test;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import javax.swing.JFrame;
-import javax.swing.JTree;
-import javax.swing.tree.DefaultMutableTreeNode;
-
-import components.EventFactory;
-import components.Executer;
-import components.GraphicalLayout;
-import components.system.Configuration;
-import analysis.StaticInfo;
-import staticFamily.StaticApp;
-import support.ADBUtility;
-import support.CommandLine;
-import support.UIUtility;
+import java.util.Comparator;
+import java.util.PriorityQueue;
 
 public class MiscellaneousTestGround {
 
 	public static void main(String[] args) {
-		System.out.println(Configuration.getValue("sample"));
+		PriorityQueue<cls> q = new PriorityQueue<cls>(new Comparator<cls>(){
+			@Override
+			public int compare(cls o1, cls o2) {
+				return o2.i - o1.i;
+			}
+			
+		}); 
+		
+		q.add(new cls(1));
+		q.add(new cls(2));
+		
+		System.out.println(q.peek());
 	}
 
+	static class cls{
+		int i = 0;
+		public cls(int i){
+			this.i = i;
+		}
+		public String toString(){
+			return i+"";
+		}
+	}
 }

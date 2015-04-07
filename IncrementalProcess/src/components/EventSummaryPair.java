@@ -12,20 +12,26 @@ import symbolic.Expression;
  
 
 public class EventSummaryPair extends DefaultEdge{ 
+	private static int gIndex = 0;
+	private int index = gIndex++;
 	
-	Event event;
-	List<WrappedSummary> summaryList;
-	UISymbolicPair source, dest;
-	int majorBranch = -1;
-	boolean isExecuted = false;
-	int tries = 0;
-	List<String> methodRoots;
-	Map<Expression,Expression> combinedSym;
-	List<Expression> combinedCons;
+	private Event event;
+	private List<WrappedSummary> summaryList;
+	private UISymbolicPair source, dest;
+	private boolean isExecuted = false;
+	private boolean canBeIgnored = false; 
+	private int tries = 0;
+	private List<String> methodRoots;
+	private Map<Expression,Expression> combinedSym;
+	private List<Expression> combinedCons;
+	
+	public final List<String> targetLines = new ArrayList<String>();
+	
+	private List<String> concreteExecutionLog;
+	
 	
 	public final static String[] ColumnIdentifier = {
-		"Event","Amount","Tries","is Conrete", "Method Roots","Primary Index", 
-		"Constraints", "Symbolics","Combined Constraints", "Combined Symbolics"
+		"Event","Amount","Tries","is Conrete", "Method Roots","Combined Constraints", "Combined Symbolics"
 	};
 	
 	public String[] toStringArray(){
@@ -43,23 +49,7 @@ public class EventSummaryPair extends DefaultEdge{
 		}else{
 			result.add("");
 		}
-		result.add(majorBranch+"");
 		if(summaryList!= null && !summaryList.isEmpty()){
-			WrappedSummary major = this.getMajorBranch();
-			
-			//Constraints
-			StringBuilder conSb = new StringBuilder();
-			for(Expression expre: major.constraints){
-				conSb.append(expre.toYicesStatement()+"\n");
-			}
-			result.add(conSb.toString());
-			//Symbolics
-			StringBuilder symSb = new StringBuilder();
-			for(Entry<Expression, Expression> entry : major.symbolicStates.entrySet()){
-				symSb.append(entry.getKey().toYicesStatement()+" = "+entry.getValue().toYicesStatement()+"\n");
-			}
-			result.add(symSb.toString());
-			
 			//Combined Constraints
 			StringBuilder combConSb = new StringBuilder();
 			for(Expression expre : this.getCombinedConstraint()){
@@ -76,76 +66,41 @@ public class EventSummaryPair extends DefaultEdge{
 		}else{
 			result.add("");
 			result.add("");
-			result.add("");
-			result.add("");
 		}
-
 		return result.toArray(new String[0]);
 	}
 	
-	
-	public void increateTryCount(){
+	public void increaseTryCount(){
 		tries += 1;
 	}
 	public int getTryCount(){
 		return tries;
 	}
 	
-	public EventSummaryPair(EventResultBundle result){
-		this(result.event, result.mappedSummaries, result.majorBranchIndex, result.methodRoots);
-	}
-	
-	public EventSummaryPair(Event event, List<WrappedSummary> summaries, int majorBranch, List<String> methodRoots){
+	public EventSummaryPair(Event event, List<WrappedSummary> summaries, List<String> methodRoots){
 		this.event = event ; 
-		if(summaries != null && majorBranch >= 0){
+		if(summaries != null){
 			this.summaryList = new ArrayList<WrappedSummary>(summaries);
-			this.majorBranch = majorBranch;
 			this.methodRoots = methodRoots;
 		}
 	}
-
-	public String toFormatedString(){
-		StringBuilder sb = new StringBuilder();
-		if(event == null){ sb.append("Event: null\n");
-		}else{
-			sb.append("Event: \n");
-			String detail = event.toFormatedString().replace("\n", "\n\t").trim();
-			sb.append(detail).append("\n");
-		}
-		
-		if(summaryList==null){
-			sb.append("Summary list is empty\n");
-		}else{
-			int index = 1;
-			for(WrappedSummary sum : summaryList){
-				if(sum == null) continue;
-				sb.append("#"+index+" Summary:\n");
-				String detail = sum.toFormatedString().replace("\n", "\n\t").trim();
-				sb.append(detail).append("\n");
-				index += 1;
+	
+	public boolean hasExactTheSameExecutionLog(List<WrappedSummary> sumList){
+		if(this.summaryList == null) return false;
+		else if(sumList != null && summaryList.size() != this.summaryList.size()) return false;
+		else{
+			for(int i =0;i<sumList.size(); i++){
+				WrappedSummary sum1 = this.summaryList.get(i);
+				WrappedSummary sum2 = sumList.get(i);
+				if(sum1 == null && sum2 == null) continue;
+				if(sum1 != null && !sum1.executionLog.equals(sum2.executionLog)){
+					return false;
+				}
 			}
+			return true;
 		}
-		sb.append("Major Branch index: "+majorBranch).append("\n");
-		sb.append("Is Concrete: "+this.isExecuted).append("\n");
-		sb.append("Tries: "+this.tries).append("\n");
-		sb.append("Method Roots: "+methodRoots).append("\n");
-		
-		combinedSym = this.getCombinedSymbolic();
-		combinedCons = this.getCombinedConstraint();
-		
-		sb.append("Combined Symbolics: \n");
-		for(Entry<Expression,Expression> entry : combinedSym.entrySet()){
-			sb.append("\t");
-			sb.append(entry.getKey().toYicesStatement()).append(" = ");
-			sb.append(entry.getValue().toYicesStatement()).append("\n");
-		}
-		sb.append("Combined Constraints:\n");
-		for(Expression expre : combinedCons){
-			sb.append("\t").append(expre.toYicesStatement()).append("\n");
-		}
-		
-		return sb.toString();
 	}
+
 	
 	@Override
 	public String toString(){
@@ -153,6 +108,9 @@ public class EventSummaryPair extends DefaultEdge{
 	}
 	
 	@Override
+	/**
+	 * Compare the event and summarylist
+	 */
 	public boolean equals(Object o){
 		if(o instanceof EventSummaryPair){
 			EventSummaryPair other = (EventSummaryPair)o; 
@@ -166,7 +124,15 @@ public class EventSummaryPair extends DefaultEdge{
 	
 	@Override
 	public int hashCode(){
-		return summaryList == null? 0 : summaryList.size();
+		if(this.summaryList == null || summaryList.isEmpty()) return 0;
+		//find the last no null summary
+		for(int i = summaryList.size() - 1; i>=0 ; i--){
+			WrappedSummary sum = summaryList.get(i);
+			if(sum != null && !sum.executionLog.isEmpty()){
+				return sum.executionLog.get(sum.executionLog.size()-1).hashCode();
+			}
+		}
+		return 0;
 	}
 	
 	public Map<Expression,Expression> getCombinedSymbolic(){
@@ -199,7 +165,7 @@ public class EventSummaryPair extends DefaultEdge{
 			combinedCons = result;
 		}
 		return combinedCons;
-	}
+	}	
 	
 	public void setConcreateExecuted(){
 		this.isExecuted = true;
@@ -214,10 +180,72 @@ public class EventSummaryPair extends DefaultEdge{
 	public Event getEvent() {
 		return event;
 	}
-	public WrappedSummary getMajorBranch(){
-		return summaryList == null ? null : this.summaryList.get(majorBranch);
-	}
 	public List<WrappedSummary> getSummaryList() {
 		return summaryList;
+	}
+	
+	public boolean isIgnored(){
+		return this.canBeIgnored;
+	}
+	
+	public void setIgnored(){
+		this.canBeIgnored = true;
+	}
+	
+
+	public String toFormatedString(){
+		StringBuilder sb = new StringBuilder();
+		sb.append("ES index: "+this.index+"\n");
+		
+		if(event == null){ sb.append("Event: null\n");
+		}else{
+			sb.append("Event: \n");
+			String detail = event.toFormatedString().replace("\n", "\n\t").trim();
+			sb.append(detail).append("\n");
+		}
+		
+		
+		
+		if(summaryList==null){
+			sb.append("Summary list is empty\n");
+		}else{
+			int index = 1;
+			for(WrappedSummary sum : summaryList){
+				if(sum == null) continue;
+				sb.append("#"+index+" Summary:\n");
+				String detail = sum.toFormatedString().replace("\n", "\n\t").trim();
+				sb.append(detail).append("\n");
+				index += 1;
+			}
+		}
+		sb.append("Is Concrete: "+this.isExecuted).append("\n");
+		sb.append("Tries: "+this.tries).append("\n");
+		sb.append("Method Roots: "+methodRoots).append("\n");
+		
+		combinedSym = this.getCombinedSymbolic();
+		combinedCons = this.getCombinedConstraint();
+		
+		sb.append("Combined Symbolics: \n");
+		for(Entry<Expression,Expression> entry : combinedSym.entrySet()){
+			sb.append("\t");
+			sb.append(entry.getKey().toYicesStatement()).append(" = ");
+			sb.append(entry.getValue().toYicesStatement()).append("\n");
+		}
+		sb.append("Combined Constraints:\n");
+		for(Expression expre : combinedCons){
+			sb.append("\t").append(expre.toYicesStatement()).append("\n");
+		}
+		
+		return sb.toString();
+	}
+	public int getIndex(){
+		return this.index;
+	}
+	
+	public void setConcreteExecutionLog(List<String> log){
+		this.concreteExecutionLog = log;
+	}
+	public List<String> getConcreteExecutionLog(){
+		return this.concreteExecutionLog;
 	}
 }

@@ -70,6 +70,15 @@ public class EventDeposit {
 		return result;
 	}
 	
+	public List<Event> getLastestEventSequnce(){
+		if(currentSequence == null) return null;
+		List<Event> sequence = new ArrayList<Event>();
+		for(InternalPair in : currentSequence){
+			sequence.add(in.e);
+		}
+		return sequence;
+	}
+	
 	
 	/**
 	 * A wrapper class which acts like an union (in C language) for

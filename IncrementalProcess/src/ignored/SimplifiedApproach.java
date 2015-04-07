@@ -10,7 +10,7 @@ import java.util.Stack;
 
 import javax.swing.tree.DefaultMutableTreeNode;
 
-import PlanBModule.AbstractExecutionManger;
+import PlanBModule.AbstractManager;
 import analysis.Expression;
 import staticFamily.StaticApp;
 import components.BasicMatcher;
@@ -74,7 +74,7 @@ public class SimplifiedApproach implements Runnable{
 	String mainAct, pkgName;
 	
 	Event closeKeyboardEvent = EventFactory.createCloseKeyboardEvent();
-	AbstractExecutionManger execution = null;//TODO
+	AbstractManager execution = null;//TODO
 	
 	GraphicalLayout currentLayout = null;
 	

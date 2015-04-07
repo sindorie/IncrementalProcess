@@ -53,6 +53,11 @@ public class GraphicalLayout {
 		return false;
 	}
 	
+	public boolean hasTheSmaeLayout(LayoutNode input){
+		if( this.layout == null && input != null){ return false;
+		}else{ return this.layout.equals(input); }
+	}
+	
 	@Override
 	public int hashCode(){
 		return actName.hashCode();

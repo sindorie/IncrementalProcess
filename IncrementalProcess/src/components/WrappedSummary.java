@@ -105,6 +105,8 @@ public class WrappedSummary {
 	
 	public String toFormatedString(){
 		StringBuilder sb = new StringBuilder();
+		sb.append(this.methodSignature+"\n");
+		
 		sb.append("Symbolics:\n");
 		for(Entry<Expression,Expression> entry : symbolicStates.entrySet()){
 			sb.append("\t");

@@ -60,6 +60,7 @@ public class BreakPointReader {
 	
 	public List<List<String>> readExecLog(){
 		Logger.trace();
+		int tryCount = 0;
 		final List<String> readLog = new ArrayList<String>(); //used to store whatever is read. 
 		final List<Exception> eList = new ArrayList<Exception>(); // used to store exception.
 		final Stack<StaticMethod> stack =new Stack<StaticMethod>();
@@ -87,7 +88,12 @@ public class BreakPointReader {
 				String line = readLog.get(lineCount);
 				if(line.trim().endsWith("Nothing suspended.")){ 
 					Logger.trace("Nothing suspended");
-					break; }
+					if(tryCount > 3){
+						break;
+					}else{
+						tryCount += 1;
+					}
+				}
 				lineCount += 1;
 				
 				if(line.contains("Breakpoint hit: ")){

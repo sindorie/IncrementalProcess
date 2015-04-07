@@ -16,6 +16,7 @@ import org.jgrapht.alg.DijkstraShortestPath;
 import org.jgrapht.graph.DirectedMaskSubgraph;
 import org.jgrapht.graph.MaskFunctor;
 
+import support.CommandLine;
 import support.Logger;
 import support.TreeUtility;
 import support.TreeUtility.Searcher;
@@ -27,6 +28,8 @@ import components.GraphicalLayout;
 import components.solver.SolverInstance;
 
 public class AnchorSolver {
+
+	boolean debug = false;
 	
 	private static JTabbedPane jtb;
 	static{
@@ -43,7 +46,7 @@ public class AnchorSolver {
 	List<DefaultMutableTreeNode> leaves;
 	List<List<Event>> sequenceList = new ArrayList<List<Event>>();
 	
-	int maxDepth = 20;
+	int maxDepth = 10;
 	int maxBandwith = 10;
 	
 	/**
@@ -52,23 +55,24 @@ public class AnchorSolver {
 	 */
 	public void solve(EventSummaryPair esPair){
 		Logger.trace(esPair.toString());
+		if(debug)CommandLine.requestInput();
 		
 		root = new DefaultMutableTreeNode();
 		leaves = new ArrayList<DefaultMutableTreeNode>();
 		InternalEventPair content = new InternalEventPair(esPair,esPair.getCombinedConstraint());
-		Logger.trace("Starting cumulative constraints");
-		for(Expression expre : esPair.getCombinedConstraint()){
-			for(Variable var : expre.getUniqueVarSet()){
-				Logger.trace(var);
+		if(debug){
+			Logger.trace("Starting cumulative constraints");
+			for(Expression expre : esPair.getCombinedConstraint()){
+				for(Variable var : expre.getUniqueVarSet()){
+					Logger.trace(var);
+				}
 			}
 		}
-		
+
 		root.setUserObject(content);
 		leaves.add(root);
 		
-		Logger.debug("Constraints:"+esPair.getMajorBranch().constraints.toString());
 		locateAnchor();
-		Logger.debug("Tree depth:"+ root.getDepth());
 		findConnecter();
 		
 		JScrollPane jsp = new JScrollPane();
@@ -132,14 +136,17 @@ public class AnchorSolver {
 				InternalEventPair pair = (InternalEventPair) node.getUserObject();
 				for(Expression expre : pair.cumulativeConstraints){
 					if(expre.getChildCount() == 1){
-						Logger.trace(expre.toYicesStatement());
 						throw new AssertionError();
 					}
 				}
 			}
 			
+			
+			if(toAttach== null || toAttach.isEmpty()){break;}
 			updateLeaves(toAttach);
 			depth += 1;
+			
+			if(debug)CommandLine.requestInput();
 		}
 	}
 	
@@ -152,25 +159,35 @@ public class AnchorSolver {
 		List<InternalEventPair> result = new ArrayList<InternalEventPair>();
 		List<EventSummaryPair> esList = model.getAllEdges();
 		
-//		Logger.trace("Cumulative Constraint");
-//		for(Expression expre : cumulativeConstraint){
-//			Logger.trace(expre.toYicesStatement());
-//			for(Variable var : expre.getUniqueVarSet()){
-//				Logger.trace(var);
-//			}
-//		}
+		if(debug){
+			CommandLine.requestInput();
+			Logger.trace("Cumulative Constraint");
+			for(Expression expre : cumulativeConstraint){
+				Logger.trace(expre.toYicesStatement());
+				for(Variable var : expre.getUniqueVarSet()){
+					Logger.trace(var);
+				}
+			}
+		}
+		
+		
 		
 		for(EventSummaryPair esPair : esList){
+			Logger.trace(esPair.getEvent());
+			Logger.trace(esPair.getEvent().getSource());
+			Logger.trace(esPair.getCombinedConstraint());
+			Logger.trace(esPair.getCombinedSymbolic());
+			if(debug)CommandLine.requestInput();
+			
 			List<Expression> updated = isRelatedAndSatisfiable(cumulativeConstraint , esPair);
 			if(updated != null){
 				InternalEventPair toAdd = new InternalEventPair(esPair, updated);
 				toAdd.isComplete = isComplete(updated);
 				result.add(toAdd);
-
-//				Logger.trace("updated: ");
-//				for(Expression expre : updated){
-//					Logger.trace(expre.toYicesStatement());
-//				}
+				if(debug){
+					Logger.trace("updated: ");
+					for(Expression expre : updated){ Logger.trace(expre.toYicesStatement()); }
+				}
 			}
 		}
 		return result;
@@ -197,13 +214,15 @@ public class AnchorSolver {
 		Map<Expression,Expression> symCandidate = esPair.getCombinedSymbolic();
 		List<Expression> additionalCumstraint = esPair.getCombinedConstraint();
 		
-		for(Entry<Expression,Expression> entry : symCandidate.entrySet()){
-			Logger.trace(entry.getKey()+" : "+entry.getValue());
+		if(debug){
+			for(Entry<Expression,Expression> entry : symCandidate.entrySet()){
+				Logger.trace(entry.getKey()+" : "+entry.getValue());
+			}
+			for(Expression expre : additionalCumstraint){
+				Logger.trace(expre.toYicesStatement());
+			}
 		}
-		
-		for(Expression expre : additionalCumstraint){
-			Logger.trace(expre.toYicesStatement());
-		}
+
 		
 		boolean related = false;
 		//if any variable in the given symbolic states is in the cumulative constraint
@@ -270,26 +289,6 @@ public class AnchorSolver {
 		}
 		return null;
 	}
-	
-//	private boolean checkExpressionValid(Expression expre){
-//		TreeUtility.breathFristSearch(expre, new Searcher(){
-//			@Override
-//			public int check(TreeNode node) {
-//				if(node instanceof Variable){
-//					return Searcher.NORMAL;
-//				}else if(node instanceof Expression){
-//					Expression eNode = (Expression)node;
-////					if(eNode.getChildCount())
-//					
-//				}else{v,,.vno999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999
-//					
-//				}
-//				return 0;
-//			}
-//		});
-//		
-//		return false;
-//	}
 	
 	/**
 	 * Check if all variables are solved
@@ -456,7 +455,7 @@ public class AnchorSolver {
 				
 			@Override
 			public boolean isEdgeMasked(EventSummaryPair edge) {
-				if(edge.getMajorBranch() != null){
+				if(edge.getCombinedSymbolic() != null){
 					for(Expression var: edge.getCombinedSymbolic().keySet()){
 						if(exculded.contains(var)) return true;
 					}

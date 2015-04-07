@@ -72,21 +72,10 @@ public class Executer {
 				iY = (int) (corrdinatesRatio[0] * iY);
 			}
 			String inputCommand = "input tap " + iX + " " + iY;
-			Thread t = new Thread(new Runnable(){
-				@Override
-				public void run() {
-					CommandLine.executeShellCommand(inputCommand, serial);
-					Logger.trace(CommandLine.getLatestStdoutMessage());
-					Logger.trace(CommandLine.getLatestStdoutMessage());
-					if(deposit != null){ 
-						deposit.addEvent(event); }
-				}
-			});
-			t.start();
-			try { t.join( 200 );
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
+			CommandLine.executeShellCommand(inputCommand, serial);
+			Logger.trace(CommandLine.getLatestStdoutMessage());
+			Logger.trace(CommandLine.getLatestStdoutMessage());
+			if(deposit != null){  deposit.addEvent(event); }
 		}break;
 		case EventFactory.iUNDEFINED:
 		default: throw new IllegalArgumentException();

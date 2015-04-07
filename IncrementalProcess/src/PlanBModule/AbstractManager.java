@@ -6,44 +6,22 @@ import staticFamily.StaticApp;
 import components.Event;
 import components.EventSummaryPair;
 
-public abstract class AbstractExecutionManger {
+public abstract class AbstractManager {
 	protected StaticApp app;
 	protected UIModel model;
-	protected AbstractExuectionOperation operater;
+	protected AbstractOperation operater;
 	
-	public AbstractExecutionManger(StaticApp app, UIModel model){
+	public AbstractManager(StaticApp app, UIModel model){
 		this.app = app;
 		this.model = model;
 	}
 	
 	/**
-	 * Check if the operation is in the exploration mode
-	 * Exploration mode refers to that the program is exploring the UIs. 
-	 * @return true if in exploration mode
-	 */
-	public abstract boolean isInExplorationMode();
-	
-	/**
-	 * Check if the operation is still in expansion mode
-	 * Expansion mode refers to that the program is trying to expand the knowledge
-	 * of the application under test by concrete execution of a path which is triggered
-	 * by an event. 
-	 * @return true if in expansion mode
-	 */
-	public abstract boolean isInExpansionMpde();
-	
-	/**
-	 * Check if the program is trying to reach the target line
+	 * Make the decision
 	 * @return
 	 */
-	public abstract boolean isInReachTargetMode();
-	
-	/**
-	 * Check if the operation has ended
-	 * @return true if operation is finished.
-	 */
-	public abstract boolean isFinished();
-	
+	public abstract Decision decideOperation();
+		
 	/**
 	 * get the next event for the exploration mode
 	 * @return event to be executed
@@ -61,24 +39,6 @@ public abstract class AbstractExecutionManger {
 	 * @return target summary
 	 */
 	public abstract EventSummaryPair getNextTargetSummary();
-	
-	/**
-	 * add events which will be later used in the exploration mode 
-	 * @param events to be added
-	 */
-	public abstract void add(Event event);
-
-	/**
-	 * add a event-summary pair which is later used in expansion mode
-	 * @param symbolicSummary
-	 */
-	public abstract void add(EventSummaryPair symbolicSummary);
-	
-	/**
-	 * add a list of event-summary pair which is later used in expansion mode
-	 * @param symbolicSummaryList
-	 */
-	public abstract void addAll(List<EventSummaryPair> symbolicSummaryList);
 	
 	/**
 	 * Prepare for the execution procedure.
@@ -133,7 +93,11 @@ public abstract class AbstractExecutionManger {
 	public abstract void onIterationStepEnd();
 
 	
-	public void setOperater(AbstractExuectionOperation operater){
+	public void setOperater(AbstractOperation operater){
 		this.operater = operater;
+	}
+	
+	public enum Decision{
+		EXPLORE, EXPAND, REACHTARGET, END;
 	}
 }

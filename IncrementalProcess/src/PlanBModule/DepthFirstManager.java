@@ -1,18 +1,20 @@
 package PlanBModule;
 
-import java.awt.BorderLayout;
+import java.awt.Container;
+import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.PriorityQueue;
 import java.util.Stack;
+import java.util.Comparator;
 
 import javax.swing.BorderFactory;
-import javax.swing.BoxLayout;
-import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
@@ -29,45 +31,68 @@ import components.EventSummaryPair;
 import components.GraphicalLayout;
 import components.WrappedSummary;
 
-public class DepthFirstManager extends AbstractExecutionManger{
-	private boolean enableGUI = true;
-	private Stack<Event> newEventStack;
-	private List<EventSummaryPair> validationQueue;
-	private List<EventSummaryPair> targetQueue;
+public class DepthFirstManager extends AbstractManager{
 	
-	private int periodExpansionTryCount = 0;
-	private int expansionPeriod = 5;
-	private String[] targets;
-	private int target_index = -1;
-	private int maxIndividualValidationTry = 5;
+	/* 
+	 * Operation field
+	 */
 	private EventSummaryPair currentESPair;
+	private Stack<Event> newEventStack;
+	private PriorityQueue<EventSummaryPair> validationQueue, targetQueue;
+	private List<EventSummaryPair> ignoredList, confirmedList;
+	
+	/*
+	 * Target related field
+	 */
+	private String[] targets;
 	private Map<String, Boolean> reachedTargets = new HashMap<String, Boolean>();
-	private Map<String, JTextArea> targetAreas = new HashMap<String, JTextArea>(); 
-//	private Map<String, List<EventSummaryPair>> targetSummaryCandidate = new HashMap<String, List<EventSummaryPair>>();
 	
+	/*
+	 * data recording field 
+	 */
+	private int totalConcreateExecution = 0, newConcreteExecution = 0, executionCount = 0;
+	private int maxIndividualValidationTry = 5;
+	private int iterationCount = 0;
 	
+	/*
+	 * GUI field
+	 */
+	private boolean enableGUI = true;
+	private DefaultTableModel newEventModel, executedEventModel;
+	private Map<String, JTextArea> targetTextAreas = new HashMap<String, JTextArea>();
+	private JTextArea targetArea, validArea;
 	
-	private DefaultTableModel newEventModel, executedEventModel, 
-			validationModel, targetSummmaryModel, targetModel;
-
-	private static String[] targetModel_columns = {
-		"Target Line","is Reached"
-	};
 	
 	public DepthFirstManager(StaticApp app, UIModel model){
 		super(app, model);
+		
 		if(!enableGUI){
 			newEventStack = new Stack<Event>();
-			validationQueue = new ArrayList<EventSummaryPair>();
-			targetQueue = new ArrayList<EventSummaryPair>();
-			
+			confirmedList = new ArrayList<EventSummaryPair>();
+			ignoredList = new ArrayList<EventSummaryPair>();
+			targetQueue = new PriorityQueue<EventSummaryPair>(new ESPriority()){
+				@Override
+				public boolean add(EventSummaryPair esPair){
+					if(esPair.getTryCount() >= maxIndividualValidationTry){
+						ignoredList.add(esPair);
+						return false;
+					}
+					return super.add(esPair);
+				}
+			};
+			validationQueue = new PriorityQueue<EventSummaryPair>(new ESPriority()){
+				@Override
+				public boolean add(EventSummaryPair esPair){
+					if(esPair.getTryCount() >= maxIndividualValidationTry){
+						ignoredList.add(esPair);
+						return false;
+					}
+					return super.add(esPair);
+				}
+			};
 		}else{
-			
 			final JPanel pane = new JPanel();
 			pane.setLayout(new GridLayout(0,1));
-			
-//			pane.setLayout(new BoxLayout(pane, BoxLayout.Y_AXIS));
-			
 			/*New Event queue*/
 			final JTable newEventTable = new JTable();
 			final JScrollPane eventAreaContainer = new JScrollPane();
@@ -88,44 +113,10 @@ public class DepthFirstManager extends AbstractExecutionManger{
 			final TitledBorder border_executed = BorderFactory.createTitledBorder(null, "Executed Event List");
 			exectuedEventContainer.setBorder(border_executed);
 			
-			/*Validation Queue*/
-			final JTable validtionTable = new JTable();
-			final JScrollPane validationContainer = new JScrollPane();
-			validationContainer.setViewportView(validtionTable);
-			this.validationModel = new DefaultTableModel();
-			this.validationModel.setColumnIdentifiers(EventSummaryPair.ColumnIdentifier);
-			validtionTable.setModel(validationModel);
-			final TitledBorder border_validation = BorderFactory.createTitledBorder(null, "Validation Queue");
-			validationContainer.setBorder(border_validation);
-			
-			/*Target Summary Queue*/
-			JTable targetSummaryTable = new JTable();
-			final JScrollPane targetSummaryContainer = new JScrollPane();
-			targetSummaryContainer.setViewportView(targetSummaryTable);
-			this.targetSummmaryModel = new DefaultTableModel();
-			this.targetSummmaryModel.setColumnIdentifiers(EventSummaryPair.ColumnIdentifier);
-			targetSummaryTable.setModel(targetSummmaryModel);
-			final TitledBorder border_info = BorderFactory.createTitledBorder(null, "Target Summary Queue");
-			targetSummaryContainer.setBorder(border_info);
-			
-			/*Targets queue*/
-			final JTable targetTable = new JTable();
-			final JScrollPane targetContainer = new JScrollPane();
-			targetContainer.setViewportView(targetTable);
-			this.targetModel = new DefaultTableModel();
-			this.targetModel.setColumnIdentifiers(targetModel_columns);
-			targetTable.setModel(targetModel);
-			final TitledBorder border_target = BorderFactory.createTitledBorder(null, "Target List");
-			targetContainer.setBorder(border_target);
-			
 			pane.add(eventAreaContainer);
 			pane.add(exectuedEventContainer);
-			pane.add(validationContainer);
-			pane.add(targetContainer);
-			pane.add(targetSummaryContainer);
 			
 			Logger.registerJPanel("Manager status", pane);			
-			
 			newEventStack = new Stack<Event>(){
 				@Override
 				public Event pop(){
@@ -141,33 +132,69 @@ public class DepthFirstManager extends AbstractExecutionManger{
 					return super.push(event);
 				}
 			};
-			validationQueue = new ArrayList<EventSummaryPair>(){
+			
+			JPanel queuePane = new JPanel();
+			queuePane.setLayout(new GridLayout(4,1));
+			JScrollPane targetContainer = new JScrollPane();
+			JScrollPane validationContainer = new JScrollPane();
+			JScrollPane confiemdContainer = new JScrollPane(); 
+			JScrollPane ignoedContainer = new JScrollPane();
+			
+			targetArea = new JTextArea();
+			validArea = new JTextArea();
+			JTextArea confirmArea = new JTextArea();
+			JTextArea ignoreArea = new JTextArea();
+			
+			targetContainer.setViewportView(targetArea);
+			validationContainer.setViewportView(validArea);
+			confiemdContainer.setViewportView(confirmArea);
+			ignoedContainer.setViewportView(ignoreArea);
+			
+			queuePane.add(targetContainer);
+			queuePane.add(validationContainer);
+			queuePane.add(confiemdContainer);
+			queuePane.add(ignoedContainer);
+			
+			confirmedList = new ArrayList<EventSummaryPair>(){
 				@Override
 				public boolean add(EventSummaryPair esPair){
-					validationModel.addRow(esPair.toStringArray());
+					confirmArea.append(esPair.toString());
 					return super.add(esPair);
-				}
-
-				@Override
-				public EventSummaryPair remove(int index){
-					validationModel.removeRow(index);
-					return super.remove(index);
 				}
 			};
-			targetQueue = new ArrayList<EventSummaryPair>(){
+			ignoredList = new ArrayList<EventSummaryPair>(){
 				@Override
 				public boolean add(EventSummaryPair esPair){
-					targetSummmaryModel.addRow(esPair.toStringArray());
+					ignoreArea.append(esPair.toString());
 					return super.add(esPair);
 				}
+			};
+			targetQueue = new PriorityQueue<EventSummaryPair>(new ESPriority()){
 				@Override
-				public EventSummaryPair remove(int index){
-					targetSummmaryModel.removeRow(index);
-					return super.remove(index);
+				public boolean add(EventSummaryPair esPair){
+					if(esPair.getTryCount() >= maxIndividualValidationTry){
+						ignoredList.add(esPair);
+					}else{
+						super.add(esPair);
+					}
+					updateTargetQueuePane();
+					return true;
+				}
+			};
+			validationQueue = new PriorityQueue<EventSummaryPair>(new ESPriority()){
+				@Override
+				public boolean add(EventSummaryPair esPair){
+					if(esPair.getTryCount() >= maxIndividualValidationTry){
+						ignoredList.add(esPair);
+					}else{
+						super.add(esPair);
+					}
+					updateValidationPane();
+					return true;
 				}
 			};
 			
-			
+			Logger.registerJPanel("Queue", queuePane);
 		}
 	}
 	
@@ -175,276 +202,161 @@ public class DepthFirstManager extends AbstractExecutionManger{
 	 * define a list of targets in the format of String
 	 * @param methodSignature
 	 */
-	public void reachTargets(String... methodSignature){
+	public void setTargets(String... methodSignature){
+		if(methodSignature == null) return;
 		targets = methodSignature;
-		target_index = 0;
-		for(String line : methodSignature){
-			reachedTargets.put(line, false);
-//			targetSummaryCandidate.put(line, new ArrayList<EventSummaryPair>());
-		}
-		updateTargetListTable();
-		
+		for(String line : methodSignature){ reachedTargets.put(line, false); }
 		if(this.enableGUI){
-			JTabbedPane jtp = new JTabbedPane();
+			JScrollPane targetPanel = new JScrollPane();
+			Container container = new Container();
+			targetPanel.setViewportView(container);
+			
+			container.setLayout(new GridLayout(0,1)); // only column 
 			for(String line : methodSignature){
-				JScrollPane jsp = new JScrollPane();
+				TitledBorder titleBorder = BorderFactory.createTitledBorder(line);
 				JTextArea area = new JTextArea();
+				area.setEditable(false);
+				area.setBorder(titleBorder);
+				
+				JScrollPane jsp = new JScrollPane();
 				jsp.setViewportView(area);
-				jtp.add(line, jsp);
+				jsp.setPreferredSize(new Dimension(400, 500));
+				
+				container.add(jsp);
+				this.targetTextAreas.put(line, area);
 			}
-			Logger.registerJPanel("Target", jtp);
+			Logger.registerJPanel("Targets", targetPanel);
 		}
 	}
 	
 	@Override
 	public void onPreparation() {
-		Logger.trace();
 		String mainAct = app.getMainActivity().getJavaName();
 		String pkgName = app.getPackageName();	
-		
 		this.model.defineRoot(GraphicalLayout.Launcher);
-		this.add(EventFactory.createLaunchEvent(
+		this.newEventStack.push(EventFactory.createLaunchEvent(
 				GraphicalLayout.Launcher, pkgName, mainAct));
-		
 		if(this.operater == null || this.model == null) throw new AssertionError();
+		
+		iterationCount =0;
 	}
-	
+	@Override public void onIterationStepStart() { currentESPair = null; }
 	@Override
-	public void onIterationStepStart() {
-		//TODO nothing to do at this point 
+	public Decision decideOperation() {
+		if(isLimitReached()) return Decision.END;
+		if(!this.newEventStack.isEmpty()){ 	  return Decision.EXPLORE;
+		}else if(decideReachTarget()){ 		  return Decision.REACHTARGET;
+		}else if(!validationQueue.isEmpty()){ return Decision.EXPAND;
+		}else{ return Decision.END; }
 	}
 	
 	/**Exploration Mode**/
-	
-	@Override
-	/**
-	 * Exploration UI mode occurs when there are new events
-	 * @return
-	 */
-	public boolean isInExplorationMode() {
-		boolean result = newEventStack.isEmpty() == false;
-		Logger.trace(result+"");
-		return result;
-	}
+	@Override public void onExplorationStepStart() { }
+	@Override public Event getNextExplorationEvent(){ return this.newEventStack.pop(); }
+	@Override public void onExplorationStepEnd() {  }
 
-	@Override
-	public void onExplorationStepStart() {
-		Logger.trace();
-		// TODO Auto-generated method stub
-	}
-	
-	@Override
-	public Event getNextExplorationEvent(){
-		return this.newEventStack.pop();
-	}
-
-	@Override
-	public void onExplorationStepEnd() {
-		Logger.trace();
-		//check if any new event 
-		List<Event> newEvents = model.getAdditionalEvent();
-		if(newEvents != null && !newEvents.isEmpty()){
-			Logger.info("Added Events");
-			for(Event e : newEvents){
-				Logger.info(e);
-				this.newEventStack.push(e);
-			}
-		}
-
-		//check if any new event-summary 
-		List<EventSummaryPair> toValidateList = operater.getAdditionalValidationEvents();
-		if(toValidateList != null && !toValidateList.isEmpty()){ 
-			Logger.info("Added Validations: ");
-			for(EventSummaryPair exPair : toValidateList){
-				Logger.info(exPair.toString());
-			}
-			for(EventSummaryPair esPair : toValidateList){
-//				boolean shouldBeTarget = false;
-//				if(this.targets != null && esPair.getSummaryList() != null){
-//					for(WrappedSummary sum : esPair.getSummaryList()){
-//						for(String line : this.targets){
-//							if(sum.executionLog.contains(line)){
-//								this.targetQueue.add(e)
-//							}
-//						}
-//					}
-//				}
-//				if(shouldBeTarget == false){
-//					
-//				}
-				validationQueue.add(esPair);
-			}
-		}
-		
-		//Check the last Espair hit any target line
-		EventSummaryPair last = operater.getLastExecutedEvent();
-		checkTargetReachablility(last);
-
-		Logger.trace("Last esPair: "+last);
-	}
-
-	
 	/**Expansion mode**/
-	
-	@Override
-	/**
-	 * Expansion mode occurs when the program 
-	 * 1. is not in exploration mode;
-	 * 2. is not in reach target mode;
-	 * 3. there is at least one event-summary to validate
-	 * @return
-	 */
-	public boolean isInExpansionMpde() {
-		boolean result = !isInReachTargetMode() && validationQueue.isEmpty() == false;
-		Logger.trace(result+"");
-		return result;
-//		return false;
+	@Override public void onExpansionStepStart() {  }
+	@Override public EventSummaryPair getNextExpansionEvent() { 
+		currentESPair = validationQueue.poll();  
+		return this.currentESPair;
 	}
-	
-	@Override
-	public void onExpansionStepStart() {
-		Logger.trace();
-		// TODO Auto-generated method stub
-	}
-	
-	@Override
-	public EventSummaryPair getNextExpansionEvent() {
-		currentESPair = validationQueue.remove(0);
-		return currentESPair;
-	}
+	@Override public void onExpansionStepEnd() {}
 
-	@Override
-	public void onExpansionStepEnd() {
-		if(currentESPair.isConcreateExecuted()){
-			validationQueue.add(currentESPair);
-		}
-		periodExpansionTryCount += 1;
-		checkTargetReachablility(operater.getLastExecutedEvent());
-		Logger.trace();
-	}
-
-	
 	/**Reach target mode**/
-
-	@Override
-	/**
-	 * After any target is encounter, every after a few try 
-	 * on the expansion mode and the program is not in exploration
-	 * Note: there could be not preset targets.
-	 * mode.
-	 * @return
-	 */
-	public boolean isInReachTargetMode() {
-		boolean result = target_index >= 0 && !isInExplorationMode() && 
-						periodExpansionTryCount >= expansionPeriod;
-		Logger.trace(result+"");
-		return result;
-	}
+	@Override public void onReachTargetStart() {}
+	@Override public EventSummaryPair getNextTargetSummary() { return targetQueue.poll(); }	
+	@Override public void onReachTargetEnd() { Logger.trace(); }
 	
-	@Override
-	public void onReachTargetStart() {
-		Logger.trace();
-		periodExpansionTryCount = 0;
-	}
-
-	@Override
-	public EventSummaryPair getNextTargetSummary() {
-		return targetQueue.get(0);
-//		if(this.target_index >= 0 && target_index < this.targets.length){
-//			
-//			
-//			
-//			return this.//TODO
-//		}else{
-//			return null;
-//		}
-	}
-	
-	@Override
-	public void onReachTargetEnd() {
-		boolean isReached = checkTargetReachablility(operater.getLastExecutedEvent());
-		if(isReached){
-			targetQueue.remove(0);
-		}
-		Logger.trace();
-	}
-	
-	
-	/**Finish condition**/
-
-	@Override
-	/**
-	 * The program is considered finished when
-	 * 1. The state is not expansion mode or exploration mode
-	 * 	  if there is no preset targets.
-	 * 2. All targets are reached 
-	 * 3. Some limitation is reached. 
-	 * @return
-	 */
-	public boolean isFinished() {
-		
-		return !this.isInExpansionMpde() && !this.isInExplorationMode();
-		
-//		if(isLimitReached()){
-//			return true;
-//		}else if(this.target_index < 0){
-//			return !this.isInExpansionMpde() && !this.isInExplorationMode();
-//		}else{
-//			boolean queneEmpty = this.targetQueue.isEmpty();
-//			
-//			
-//			for(Entry<String, Boolean> entry : reachedTargets.entrySet()){
-//				if(entry.getValue()){ //reached
-//					
-//				}else{ //not reached 
-//					this.targetQueue.isEmpty()
-//					
-//				}
-//			}
-//			
-//			
-//			return this.target_index >= this.targets.length;
-//		}
-	}
-
-
 	@Override
 	public void onIterationStepEnd() {
-		// TODO Auto-generated method stub
-		
-	}
+		// Check from the UI model if there is any new event.
+		List<Event> newEvents = this.model.getAdditionalEvent();
+		if(newEvents != null){
+			for(Event event : newEvents){
+				this.newEventStack.push(event);
+			}
+		}		
+		// Check from the Operator if there is any new summary which needs to be validated
+		List<EventSummaryPair> toValidateList = operater.getAdditionalValidationEvents();
+		if(toValidateList != null && !toValidateList.isEmpty()){
+			for(EventSummaryPair esPair : toValidateList){
+				if(this.targets != null && esPair.getSummaryList() != null){
+					for(WrappedSummary sum : esPair.getSummaryList()){
+						for(String line : this.targets){
+							if(sum.executionLog.contains(line)){
+								esPair.targetLines.add(line);
+							}
+						}
+					}
+				}
+				if(esPair.targetLines.size() > 0){ this.targetQueue.add(esPair);
+				}else{ validationQueue.add(esPair); }
+			}
+		}
 
-	@Override
-	public void onFinish() {
-		//Nothing to do at this point
-	}
-
-
-	/**Tasks enqueue**/
-	@Override
-	public void add(Event event) {
-		this.newEventStack.push(event);
-	}
-
-	@Override
-	public void add(EventSummaryPair symbolicSummary) {
-		validationQueue.add(symbolicSummary);
-	}
-
-	@Override
-	public void addAll(List<EventSummaryPair> symbolicSummaryList) {
-		for(EventSummaryPair esPair : symbolicSummaryList){
-			validationQueue.add(esPair);
+		//An event summary is ignored due to the incompleteness of summary list
+		//the current esPair is null iff it was an exploration operation
+		if(this.currentESPair != null && !this.currentESPair.isIgnored()){
+			if(this.currentESPair.isIgnored()){
+				
+			}else if(!currentESPair.isConcreateExecuted()){
+				//not concrete execution, check if it still contain useful target
+				boolean containUnreachedTarget = false;
+				for(String line : this.currentESPair.targetLines){
+					if(reachedTargets.get(line).booleanValue() == false){
+						containUnreachedTarget = true;
+						break;
+					}
+				}
+				if(containUnreachedTarget){ //and not concrete executed
+					this.targetQueue.add(currentESPair);
+				}else{ this.validationQueue.add(currentESPair); }
+			}
 		}
 		
+		//Check the actual event summary which occurred. 
+		EventSummaryPair actual = this.operater.getLastExecutedEvent();
+		//the actual esPair is null if reposition failure during exploration or 
+		//solve for event failure.
+		if(actual != null){ checkTargetReachablility(actual); }
+		iterationCount+= 1;
 	}
-
+	
+	@Override 
+	public void onFinish() { 
+		for(Entry<String,Boolean> entry : this.reachedTargets.entrySet()){
+			String line = entry.getKey();
+			boolean reached = entry.getValue();
+			System.out.println("Target:    "+line);
+			System.out.println("Sucessful: "+reached);
+			if(reached){
+				JTextArea area = targetTextAreas.get(line);
+				String sequences = area.getText();
+				System.out.println(sequences);
+			}	
+		}
+	}
 
 	/**Miscellaneous helper**/
 	
+	/* TODO Under construction section */
+	
 	private boolean isLimitReached(){
-		//TODO to define
-		return false;
+		if(newEventStack == null) return false;
+		
+		boolean eventLimit = this.newEventStack.isEmpty();
+				
+		boolean targetLimit =
+				(targetQueue == null) ||
+				(this.targetQueue.isEmpty()) ||
+				(this.targetQueue.peek().getTryCount() > maxIndividualValidationTry);
+				
+		boolean valLimit = 
+				validationQueue == null ||
+				validationQueue.isEmpty() ||
+				validationQueue.peek().getTryCount() > maxIndividualValidationTry;
+		return (eventLimit && targetLimit && valLimit);
 	}
 	
 	/**
@@ -452,100 +364,108 @@ public class DepthFirstManager extends AbstractExecutionManger{
 	 * @param executed
 	 */
 	private boolean checkTargetReachablility(EventSummaryPair executed){
-		if(this.target_index < 0) return false;
-		//check if any summary which is just executed contains any target line
-		List<WrappedSummary> sumList = executed.getSummaryList();
-		if(sumList == null) return false;
+		if(isTargetSet() == false) return false;
+		if(!executed.isConcreateExecuted()) throw new AssertionError();
 		
-		boolean anyChange = false;
-		for(WrappedSummary sum : sumList){
-			for(String targetLine : targets){//check any targe line is hit
-				if(sum.executionLog.contains(targetLine)){
-					reachedTargets.put(targetLine, true);
-					anyChange = true;			
+		if(executed.getTryCount() == 1){ // newly executed event summary pair
+			newConcreteExecution+=1;
+			List<WrappedSummary> sumList = executed.getSummaryList();
+			if(sumList == null || sumList.isEmpty()) return false;
+			List<Event> sequence = this.operater.getLatestSequence();
+			if(sequence == null) throw new AssertionError();
+			for(WrappedSummary sum : sumList){
+				if(sum == null || sum.executionLog == null) continue;
+				for(String targetLine : targets){//check any target line is hit
+					if(sum.executionLog.contains(targetLine)){
+						onTargetLineReached(targetLine, sequence);
+					}
 				}
 			}
+		}else{ //executed more than one times
+			//don't care
 		}
+		return false;
+	}
 
-		//update index_targetline
-		int i = this.target_index ;
-		for( ; i < this.targets.length ; i++){
-			String line = this.targets[target_index];
-			if(this.reachedTargets.get(line) == false) break;
-			target_index += 1;
-		}
-		if(target_index == this.targets.length){
-			this.target_index = -1;
-		}
-		
-		if(anyChange){ updateTargetListTable(); }
-		return anyChange;
+	private boolean isTargetSet(){
+		return this.targets != null;
 	}
 	
-	private void updateTargetListTable(){
-		if(this.enableGUI){
-			for(Entry<String,Boolean> entry : reachedTargets.entrySet()){
-				this.targetModel.addRow(new String[]{entry.getKey(),entry.getValue()+""});
+	/**
+	 * Every 5 new concrete execution or 10 execution
+	 * @return
+	 */
+	private boolean decideReachTarget(){
+		if(isAllReached()) return false;
+		if(this.isTargetSet() && !this.targetQueue.isEmpty()){
+			EventSummaryPair esPair = this.targetQueue.peek();
+			if(esPair.getTryCount() < this.maxIndividualValidationTry &&
+					(this.newConcreteExecution >= 5 || executionCount >= 10)){
+				return true;
 			}
 		}
+		return false;
 	}
 	
-//	private class TargeSummaryManager{
-//		Map<String, List<EventSummaryPair>> candidates = new HashMap<String, List<EventSummaryPair>>();
-//		String[] targets;
-//		int total = 0;
-//		int index = 0;
-//		EventSummaryPair lastValidation = null;
-//		
-//		TargeSummaryManager(String[] targets){
-//			this.targets = targets;
-//			for(String line : targets){
-//				candidates.put(line, new ArrayList<EventSummaryPair>());
-//			}
-//		}
-//		
-//		public boolean isAllReached(){
-//			for(List<EventSummaryPair> arr : candidates.values()){
-//				if(arr != null) return false;
-//			}
-//			return true;
-//		}
-//		
-//		public EventSummaryPair getNextTargetSummary(){
-//			EventSummaryPair result = null;
-//			index += 1;
-//			
-//			for(int i=0;i<targets.length;i++){
-//				int j = (index + i)%targets.length;
-//				String line = this.targets[j];
-//				List<EventSummaryPair> arr = candidates.get(line);
-//				if(arr != null && !arr.isEmpty()){
-//					result = arr.remove(0);
-//					break;
-//				}
-//			}
-//			
-//			this.lastValidation = result;
-//			return result;
-//		}
-//		
-//		public boolean containAnyTarget(EventSummaryPair potential){
-//			for(WrappedSummary sum : potential.getSummaryList()){
-//				for(String line : sum.executionLog){
-//					for(String target : this.targets){
-//						if(candidates.get(target) == null) continue;
-//						if(line.equals(target)){
-//							candidates.get(target).add(potential);
-//							return true;
-//						}
-//					}
-//				}
-//			}
-//			return false;
-//		}
-//		
-//		public boolean checkReachability(){
-//			
-//		}
-//	}
+	private void onTargetLineReached(String line, List<Event> sequence){
+		boolean wasReached = this.reachedTargets.get(line);
+		if(!wasReached){
+			reachedTargets.put(line, true);
+			transferBetweenQueue();
+
+			JTextArea area = targetTextAreas.get(line);
+			area.append(sequence.toString());
+		}
+	}
+	
+	private boolean isAllReached(){
+		for(Boolean b : this.reachedTargets.values()){
+			if(b.booleanValue() == false){
+				return false;
+			}
+		}
+		return true;
+	}
+	
+	private void transferBetweenQueue(){
+		List<EventSummaryPair> transfer = new ArrayList<EventSummaryPair>();
+		Iterator<EventSummaryPair> iter = this.targetQueue.iterator();
+		while(iter.hasNext()){
+			EventSummaryPair esPair = iter.next();
+			for(String line : esPair.targetLines){
+				if(this.reachedTargets.get(line).booleanValue() == false){
+					//which indicates the summary contains a unreached line
+					//do not transfer
+					continue;
+				}
+			}
+			transfer.add(esPair);
+		}		
+		this.targetQueue.removeAll(transfer);
+		this.validationQueue.addAll(transfer);
+		updateTargetQueuePane();
+		updateValidationPane();
+	}
+	
+	private void updateTargetQueuePane(){
+		if(enableGUI){
+			StringBuilder sb = new StringBuilder();
+			Iterator<EventSummaryPair> iter = this.targetQueue.iterator();
+			while(iter.hasNext()){
+				sb.append(iter.next().toString()+"\n");
+			}
+			this.targetArea.setText(sb.toString());
+		}
+	}
+	
+	private void updateValidationPane(){
+		if(enableGUI){
+			StringBuilder sb = new StringBuilder();
+			Iterator<EventSummaryPair> iter = this.validationQueue.iterator();
+			while(iter.hasNext()){
+				sb.append(iter.next().toString()+"\n");
+			}
+			this.validArea.setText(sb.toString());
+		}
+	}
 }

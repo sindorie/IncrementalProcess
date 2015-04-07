@@ -15,9 +15,7 @@ public class Event extends DefaultEdge {
 	int eventType, index = aIndex++; 
 	GraphicalLayout source, dest;
 	Map<String, Object> attributes;
-	boolean closeKeyboard = false;
-	boolean ignoreByRecorder = false;
-	
+	boolean isCloseKeyboard = false, ignoreByRecorder = false;
 	
 	public final static String[] ColumnsIdentifier = {
 		"Index", "Source","Destintation", "Type", "Attributes", "Ig", "CK"
@@ -30,11 +28,9 @@ public class Event extends DefaultEdge {
 				EventFactory.intToString(eventType),
 				attributes!= null? attributes.toString():"",
 				ignoreByRecorder+"",
-				closeKeyboard+""
+				isCloseKeyboard+""
 		};
 	}
-	
-	
 	
 	Event(){
 		attributes = new HashMap<String, Object>(); 
@@ -50,37 +46,36 @@ public class Event extends DefaultEdge {
 		this.attributes = new HashMap<String, Object>(other.attributes); 
 	}
 	public boolean isCloseKeyboard(){
-		return this.closeKeyboard;
+		return this.isCloseKeyboard;
 	}
 	
-	public Event clone(){
-		return new Event(this);
-	}
+	public Event clone(){ return new Event(this); }
 	
 	@Override	
 	public boolean equals(Object other){
 		if(other instanceof Event){
 			Event input = (Event)other;
 			if(this.eventType != input.eventType) return false;
-			if(this.source == null){ 
-				if(input.source != null) return false;
-			}else{ 
-				if(!this.source.equals(input.source)) return false;
-			}
+			if(this.source == null){ if(input.source != null) return false;
+			}else{ if(!this.source.equals(input.source)) return false; }
 			
-			if(this.dest == null){ 
-				if(input.dest != null) return false;
-			}else{ 
-				if(!this.dest.equals(input.dest)) return false; 
-			}
-			return true;
+			//since the destination and source is now shown in the toString method
+			return this.toString().equals(input.toString());
+			
+			
+//			if(this.dest == null){ 
+//				if(input.dest != null) return false;
+//			}else{ 
+//				if(!this.dest.equals(input.dest)) return false; 
+//			}
+//			return true;
 		}
 		return false;
 	}
 	
 	@Override
 	public int hashCode(){
-		return this.eventType;
+		return this.toString().hashCode();
 	}
 	
 	@Override

@@ -169,7 +169,7 @@ public class DetailOrientedProcedure implements Runnable{
 						continue Major;
 					}
 				}
-				esPair.increateTryCount();
+				esPair.increaseTryCount();
 				
 				List<List<EventSummaryPair>> path_solved = model.solveForEvent(esPair);
 				int max = Math.min(path_solved.size(), 5);
@@ -186,7 +186,7 @@ public class DetailOrientedProcedure implements Runnable{
 							continue Major;
 						}
 					}
-					esPair.increateTryCount();
+					esPair.increaseTryCount();
 				}
 			}
 		}

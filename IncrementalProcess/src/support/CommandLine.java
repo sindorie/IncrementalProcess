@@ -17,6 +17,15 @@ public class CommandLine {
 
 	private static StringBuilder stdoutSB = new StringBuilder();
 	private static StringBuilder stderrSB = new StringBuilder();
+	private static Scanner sc;
+	
+	public static boolean hasNextLine(){
+		try {
+			return System.in.available() > 0;
+		} catch (IOException e) {
+			return false;
+		}
+	}
 	
 	public static int executeCommand(String command){
 		return executeCommand(command,0);
@@ -108,7 +117,7 @@ public class CommandLine {
 		stderrSB = new StringBuilder();
 	}
 	
-	private static Scanner sc;
+	
 	public static String requestInput(){
 		if(sc == null){
 			 sc = new Scanner(System.in);

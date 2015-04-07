@@ -22,8 +22,10 @@ import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.table.DefaultTableModel;
 
+import PlanBModule.AbstractManager.Decision;
 import analysis.StaticInfo;
 import staticFamily.StaticApp;
+import support.CommandLine;
 import support.Logger;
 import support.Logger.CurrentThreadInfo;
 import support.Logger.InformationFilter;
@@ -34,72 +36,83 @@ public class EntryPoint {
 		
 		String prefix = "/home/zhenxu/workspace/APK/";
 		String path = 
-				"Dragon.apk";
+//				"Dragon.apk";
 //				"TestProcedure.apk";
 //				"Beta1.apk";
 //				"CalcA.apk";
 //		"backupHelper.apk";
-//		"net.mandaria.tippytipper.apk";
+		"net.mandaria.tippytipper.apk";
+		
+		
+		
+		
+		String[] targets = {
+//				"com.example.dragon.MainActivity:119",
+//				"com.example.dragon.SecondLayout:72",
+//				"com.example.dragon.SecondLayout:84",
+//				"com.example.dragon.SecondLayout:79",
+//				"com.example.dragon.SecondLayout:90",
+				
+				
+				"net.mandaria.tippytipperlibrary.activities.Total:259",
+				"net.mandaria.tippytipperlibrary.activities.Total:344",
+				"net.mandaria.tippytipperlibrary.activities.Total:467",
+				"net.mandaria.tippytipperlibrary.activities.Total:307",
+				"net.mandaria.tippytipperlibrary.activities.Total:377",
+				"net.mandaria.tippytipperlibrary.activities.TippyTipper:254",
+				"net.mandaria.tippytipperlibrary.activities.TippyTipper:258",
+		};
+
+		
+		
 		
 		String[] serials = getDeviceId();
 		if(serials == null){ System.out.println("Need two serial devices"); return;
 		}else{ System.out.println("Serial: "+Arrays.toString(serials)); }
 
 		setupLogger();
-
 		StaticApp app = StaticInfo.initAnalysis(prefix+path, false);
 		UIModel model = new UIModel();
 		DualDeviceOperation operater = new DualDeviceOperation(app, model, serials[0], serials[1]);
 		DepthFirstManager manager = new DepthFirstManager(app, model);
+		manager.setTargets(targets);
 		
 		final ExuectionLoop loop = new ExuectionLoop(manager, operater, model);
 		
-		//will stop for each cycle if given true
-		loop.enableCycleBreak(false);
-		new Thread(new Runnable(){
-			@Override
-			public void run() {
-				Scanner sc = new Scanner(System.in);
-				while(true){
-					if(sc.hasNextLine()){
-						String line = sc.nextLine();
-						if(line == null) continue;
-						line = line.trim();
-						if(line.equalsIgnoreCase("1")){
-							loop.enableCycleBreak(true); //dont care synchronization
-						}else if(line.equals("2")){
-							loop.enableCycleBreak(false);
-						}else if(line.equals("3") || line.isEmpty()){
-							loop.nextCycle();
-							
-						}else if(line.equals("4") || line.isEmpty()){
-
-						}else if(line.equals("9")){
-							try {
-								FileOutputStream fout = new FileOutputStream("generated/file");
-								ObjectOutputStream oos = new ObjectOutputStream(fout);  
-								synchronized(loop){
-									oos.writeObject(loop);
-									oos.close();
-									System.out.println("Done");
-								}
-							} catch (IOException e) {
-								// TODO Auto-generated catch block
-								e.printStackTrace();
-							}
-							
-						}else if(line.equalsIgnoreCase("0")){
-							break;
-						}
-					}
-				}	sc.close();
-			}
-		}).start();
-
+		loop.setMaxIteration(100);
 		
-//		System.out.println(Logger.getGlobalWokerAmount());
+//		loop.setCheckCallBack(new ExuectionLoop.CheckCallBack() {
+//			boolean cycleBreak = false;
+//			@Override
+//			public void onOperationFinish(ExuectionLoop loop) {
+//				if(cycleBreak){
+//					String line = CommandLine.requestInput();
+//					if(line.equals("1")){
+//						cycleBreak = !cycleBreak;
+//					}else if(line.equals("9")){
+//						
+//					}
+//				}else if(CommandLine.hasNextLine()){
+//					String line = CommandLine.requestInput();
+//					if(line.equals("1")){
+//						cycleBreak = !cycleBreak;
+//					}else if(line.equals("9")){
+//						
+//					}
+//				}
+//			}
+//			@Override
+//			public boolean onIterationStart(ExuectionLoop loop) {
+//				return false;
+//			}
+//			
+//			@Override
+//			public void onDecisionMade(ExuectionLoop loop, Decision nextOperation) {}
+//		});
+		
 		loop.run();
 	}
+	
 	
 	private static  String[] getDeviceId(){
 		try {
@@ -154,43 +167,14 @@ public class EntryPoint {
 		final Map<String, PrintWriter> classToWriter = new HashMap<String, PrintWriter>();
 		Logger log = new Logger(null); 
 		
-		
 		final String[] columnId = new String[]{
 				"Time", "tName","tId","Class","Method","Line","Tag","Level","Message"
 		};
-		
 		
 		log.addLocalFilter(new InformationFilter(){
 			@Override
 			public boolean filtered(CurrentThreadInfo info, String tag, String message, int level) {
 				String className = info.getCallerRecord().getClassName(); 
-				/*Write to table*/
-//				DefaultTableModel model = classToModel.get(className);
-//				if(model == null){
-//					model = new DefaultTableModel();
-//					model.setColumnIdentifiers(columnId);
-//					JTable table = new JTable();
-//					JScrollPane scroll = new JScrollPane();
-//					scroll.setViewportView(table);
-//					outputPane.addTab(className, scroll);
-//					table.setModel(model);
-//					
-//					classToModel.put(className, model);
-//				}
-//				StackTraceElement element = info.getCallerRecord();
-//				String[] row = new String[]{
-//						info.time+"",
-//						info.threadName,
-//						info.threadId+"",
-//						element.getClassName()+"",
-//						element.getMethodName(),
-//						element.getLineNumber()+"",
-//						tag, level +"",
-//						message==null?"":message
-//				};
-//				model.addRow(row);
-				
-				
 				/*Wrtie to text area*/
 				String result = Logger.StandardConstructor.construct(info, tag, message, level);
 				
@@ -206,10 +190,7 @@ public class EntryPoint {
 				}
 				area.append(result);
 				
-				
-				
 				/*Write to file*/
-				
 				if(!result.endsWith("\n")) result+="\n";
 				PrintWriter writer = null;
 				if(classToWriter.containsKey(className)){
@@ -232,40 +213,28 @@ public class EntryPoint {
 		
 		Logger.addWorker(log);
 		Logger.ConsoleLogger.addLocalFilter(new InformationFilter(){
-			String filterList = "components.ViewDeviceInfo "
-					+ "support.CommandLine"
-					+ "components.system.WindowOverview"; 
+			String filterList = 
+					  "components.ViewDeviceInfo "
+//					+ "support.CommandLine "
+					+ "components.system.WindowOverview "
+//					+ "components.Executer "
+					+ "components.BreakPointReader "
+//					+ "components.EventDeposit"
+//					+ "PlanBModule.AnchorSolver"
+//					+ "components.solver.YicesProcessInterface"
+					; 
+			
 			@Override
 			public boolean filtered(CurrentThreadInfo info, String tag,
 					String message, int level) {
-				String className = info.getCallerRecord().getClassName();
-				if(level < Logger.LEVEl_DEBUG && filterList.contains(className)){	
+				String className = info.getCallerRecord().getClassName().trim();
+				if(filterList.contains(className)){	
+					//level <= Logger.LEVEl_DEBUG && 
 					return true;
 				}
 				return false;
 			}
 		});
-		
-		
-//		JTextArea area = new JTextArea();
-//		JScrollPane sc = new JScrollPane();
-//		sc.setViewportView(area);
-//		outputPane.add("Exception", sc);
-//		
-//		Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler(){
-//			@Override
-//			public void uncaughtException(Thread t, Throwable e) {
-//				StringBuilder sb = new StringBuilder();
-//				sb.append(t.getName()+" : "+t.getName()+"\n");
-//				sb.append(e.getMessage()+"\n");
-//				for(StackTraceElement se : t.getStackTrace()){
-//					sb.append(se.getClassName()+", ");
-//					sb.append(se.getMethodName()+", ");
-//					sb.append(se.getLineNumber()+"\n");
-//				}
-//				area.append(sb.toString());
-//			}
-//		});
 	}
 
 

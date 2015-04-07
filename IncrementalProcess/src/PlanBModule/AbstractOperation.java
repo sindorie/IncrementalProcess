@@ -6,17 +6,17 @@ import staticFamily.StaticApp;
 import components.Event;
 import components.EventSummaryPair;
 
-public abstract class AbstractExuectionOperation {
+public abstract class AbstractOperation {
 	protected StaticApp app;
 	protected UIModel model;
-	protected AbstractExecutionManger manager;
+	protected AbstractManager manager;
 	
 	/**
 	 * @param app -- the application under testing
 	 * @param model -- the model of the application
 	 * @param manager -- the manager which decides the next procedure of the program 
 	 */
-	public AbstractExuectionOperation(StaticApp app, UIModel model){ 
+	public AbstractOperation(StaticApp app, UIModel model){ 
 		this.app = app;
 		this.model = model;
 	}
@@ -63,8 +63,16 @@ public abstract class AbstractExuectionOperation {
 	 */
 	public abstract EventSummaryPair getLastExecutedEvent();
 	
+	/**
+	 * Get latest sequence from launching
+	 * @return
+	 */
+	public abstract List<Event> getLatestSequence();
 	
-	public void setManager(AbstractExecutionManger manager){
+	
+	
+	
+	public void setManager(AbstractManager manager){
 		this.manager = manager;
 	}
 	

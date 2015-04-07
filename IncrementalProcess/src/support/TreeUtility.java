@@ -88,6 +88,7 @@ public class TreeUtility {
 			case Searcher.NORMAL:
 			default: //nothing 
 			}
+			if(node == null) continue;
 			for(int index = 0; index < node.getChildCount(); index ++){
 				queue.add(node.getChildAt(index));
 			}
