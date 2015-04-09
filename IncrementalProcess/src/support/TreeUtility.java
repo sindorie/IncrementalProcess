@@ -90,7 +90,9 @@ public class TreeUtility {
 			}
 			if(node == null) continue;
 			for(int index = 0; index < node.getChildCount(); index ++){
-				queue.add(node.getChildAt(index));
+				TreeNode child = node.getChildAt(index);
+//				if(child == null) continue;
+				queue.add(child);
 			}
 		}
 	}

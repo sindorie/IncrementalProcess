@@ -22,6 +22,8 @@ import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.table.DefaultTableModel;
 
+import components.system.Configuration;
+
 import PlanBModule.AbstractManager.Decision;
 import analysis.StaticInfo;
 import staticFamily.StaticApp;
@@ -41,8 +43,9 @@ public class EntryPoint {
 //				"Beta1.apk";
 //				"CalcA.apk";
 //		"backupHelper.apk";
-		"net.mandaria.tippytipper.apk";
-		
+//				"Dragon-v2.apk";
+//		"net.mandaria.tippytipper.apk";
+			"TestField.apk";
 		
 		
 		
@@ -54,13 +57,13 @@ public class EntryPoint {
 //				"com.example.dragon.SecondLayout:90",
 				
 				
-				"net.mandaria.tippytipperlibrary.activities.Total:259",
-				"net.mandaria.tippytipperlibrary.activities.Total:344",
-				"net.mandaria.tippytipperlibrary.activities.Total:467",
-				"net.mandaria.tippytipperlibrary.activities.Total:307",
-				"net.mandaria.tippytipperlibrary.activities.Total:377",
-				"net.mandaria.tippytipperlibrary.activities.TippyTipper:254",
-				"net.mandaria.tippytipperlibrary.activities.TippyTipper:258",
+//				"net.mandaria.tippytipperlibrary.activities.Total:259",
+//				"net.mandaria.tippytipperlibrary.activities.Total:344",
+//				"net.mandaria.tippytipperlibrary.activities.Total:467",
+//				"net.mandaria.tippytipperlibrary.activities.Total:307",
+//				"net.mandaria.tippytipperlibrary.activities.Total:377",
+//				"net.mandaria.tippytipperlibrary.activities.TippyTipper:254",
+//				"net.mandaria.tippytipperlibrary.activities.TippyTipper:258",
 		};
 
 		
@@ -116,7 +119,8 @@ public class EntryPoint {
 	
 	private static  String[] getDeviceId(){
 		try {
-			Process p = Runtime.getRuntime().exec("adb devices");
+			String adbVal = Configuration.getValue(Configuration.attADB);
+			Process p = Runtime.getRuntime().exec(adbVal+" devices");
 			InputStream input = p.getInputStream();
 			Thread.sleep(200);
 			byte[] buf = new byte[input.available()];
@@ -215,7 +219,7 @@ public class EntryPoint {
 		Logger.ConsoleLogger.addLocalFilter(new InformationFilter(){
 			String filterList = 
 					  "components.ViewDeviceInfo "
-//					+ "support.CommandLine "
+					+ "support.CommandLine "
 					+ "components.system.WindowOverview "
 //					+ "components.Executer "
 					+ "components.BreakPointReader "

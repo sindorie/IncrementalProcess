@@ -203,7 +203,7 @@ public class DepthFirstManager extends AbstractManager{
 	 * @param methodSignature
 	 */
 	public void setTargets(String... methodSignature){
-		if(methodSignature == null) return;
+		if(methodSignature == null || methodSignature.length == 0) return;
 		targets = methodSignature;
 		for(String line : methodSignature){ reachedTargets.put(line, false); }
 		if(this.enableGUI){

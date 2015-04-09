@@ -55,20 +55,13 @@ public class Event extends DefaultEdge {
 	public boolean equals(Object other){
 		if(other instanceof Event){
 			Event input = (Event)other;
-			if(this.eventType != input.eventType) return false;
-			if(this.source == null){ if(input.source != null) return false;
-			}else{ if(!this.source.equals(input.source)) return false; }
+			//since the destination and source is now shown in the toString method-*
+			if(!this.toString().equals(input.toString())){ return false; }
+			if(this.source.equals(input.source)) { return false; }
 			
-			//since the destination and source is now shown in the toString method
-			return this.toString().equals(input.toString());
-			
-			
-//			if(this.dest == null){ 
-//				if(input.dest != null) return false;
-//			}else{ 
-//				if(!this.dest.equals(input.dest)) return false; 
-//			}
-//			return true;
+			if(this.dest == null){  if(input.dest != null) return false;
+			}else{  if(!this.dest.equals(input.dest)) return false;  }
+			return true;
 		}
 		return false;
 	}

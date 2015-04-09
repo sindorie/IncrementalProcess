@@ -13,7 +13,6 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import android.view.KeyEvent;
 import staticFamily.StaticApp;
 import support.Logger;
-import support.Utility;
 import symbolic.Expression;
 import symbolic.SymbolicExecution;
 import components.BasicMatcher;
@@ -147,12 +146,24 @@ public class DualDeviceOperation extends AbstractOperation {
 			}
 		}
 		ExecutionResult actualResult = executeAndConstruct(newEvent);
-		List<List<WrappedSummary>> premutatedList = Utility.permutate(actualResult.mappedSummaryCandidatesList);
+//		List<List<WrappedSummary>> premutatedList = Utility.permutate(actualResult.mappedSummaryCandidatesList);
 		
 //		System.out.println("mappedSummaryCandidatesList: "+actualResult.mappedSummaryCandidatesList);
 //		System.out.println("premutatedList: "+premutatedList);
+//		Logger.trace("Method root: "+actualResult.methodRoots);
+//		Logger.trace("Consturcting validation sequence with root amount: "+(actualResult.methodRoots==null?0:actualResult.methodRoots.size()));
+//		Logger.trace("Permutated size: "+premutatedList.size());
+//		List<Integer> sizeList = new ArrayList<Integer>();
+//		for(List<WrappedSummary> wList : actualResult.mappedSummaryCandidatesList){
+//			sizeList.add(wList.size());
+//		}
+//		Logger.trace("Candidates size for each: "+sizeList);
 		
-		List<EventSummaryPair> validationCandidate = filterConstructAndDesposit(premutatedList, newEvent, actualResult.methodRoots, actualResult.esPair);
+		
+		List<List<WrappedSummary>> linarList = linearHelper(actualResult.mappedSummaryCandidatesList);
+//		premutatedList
+		List<EventSummaryPair> validationCandidate = filterConstructAndDesposit(linarList, newEvent, actualResult.methodRoots, actualResult.esPair);
+		Logger.trace("Size: "+(validationCandidate==null?0:validationCandidate.size()));
 		this.newValidationEvent = validationCandidate;
 		// no need to check event deposit
 		this.lastExecutedEvent = actualResult.esPair;
@@ -161,6 +172,7 @@ public class DualDeviceOperation extends AbstractOperation {
 		model.update(lastExecutedEvent, actualResult.resultedLayout); //since this is a new event
 		this.currentLayout = lastExecutedEvent.getEvent().getDest();
 		eventSummaryDeposit.deposit(this.lastExecutedEvent);
+		Logger.trace();
 	}	
 
 	@Override
@@ -185,13 +197,43 @@ public class DualDeviceOperation extends AbstractOperation {
 			}//should eventually get the correct one
 			if (winOverview.isKeyboardVisible()) { closeKeyboard(); }
 		}
-		GraphicalLayout targetLayout = new GraphicalLayout( winOverview.getFocusedWindow().actName, viewInfoJDB.loadWindowData());
+		GraphicalLayout targetLayout = this.model.findSameOrAddLayout(winOverview.getFocusedWindow().actName, viewInfoJDB.loadWindowData());
 		if (targetLayout.equals(toValidate.getEvent().getSource()) == false) {
 			Logger.debug("unexpected layout"); return;
 		}
 
 		Logger.trace("ready to try event");
 		ExecutionResult result = executeAndConstruct(toValidate.getEvent());
+		
+		
+		boolean successful = validationComparionUnderLinearPolicy(result, toValidate);
+		if(successful){
+			EventSummaryPair actualOne = eventSummaryDeposit.findOrConstruct(result.esPair);
+			if(actualOne != toValidate){
+				toValidate.increaseTryCount();
+				toValidate.setIgnored();
+			}
+			actualOne.increaseTryCount();
+			if(actualOne.isConcreateExecuted() == false){
+				actualOne.setConcreateExecuted();
+				this.model.update(actualOne, result.resultedLayout);
+			}
+			this.lastExecutedEvent = actualOne;
+			this.currentLayout = lastExecutedEvent.getEvent().getDest();
+		}else{
+			toValidate.increaseTryCount();
+			EventSummaryPair actualOne = eventSummaryDeposit.findOrConstruct(result.esPair);
+			actualOne.increaseTryCount();
+			if(actualOne.isConcreateExecuted() == false){
+				actualOne.setConcreateExecuted();
+				this.model.update(actualOne, result.resultedLayout);
+			}
+			this.lastExecutedEvent = actualOne;
+			this.currentLayout = lastExecutedEvent.getEvent().getDest();	
+		}
+		
+		
+		
 		
 		/*
 		 * Compare the resulted summary with the one to validate
@@ -209,94 +251,111 @@ public class DualDeviceOperation extends AbstractOperation {
 		 * 
 		 * Note: Assuming only the last few method of the actual execution could ever be missing
 		 */
-		boolean knownBranchFullyMatches = true;
-		if( result.methodRoots.size() < toValidate.getMethodRoots().size() ){
-			knownBranchFullyMatches = false;
-		}else{
-			for(int i =0;i<toValidate.getMethodRoots().size(); i++){
-				WrappedSummary sum1= toValidate.getSummaryList().get(i);
-				WrappedSummary sum2 = result.esPair.getSummaryList().get(i);
-				//check perfect match for the first few
-				if(sum1 == null){ if(sum2 != null){ knownBranchFullyMatches = false; break; }
-				}else{ if(!sum1.equals(sum2)){ knownBranchFullyMatches = false; break; }}
-			}
-		}
-		Logger.trace("knownBranchFullyMatches: "+knownBranchFullyMatches);
-		if(knownBranchFullyMatches){
-			if(result.methodRoots.size() == toValidate.getMethodRoots().size()){
-				Logger.trace("Perfect match");
-				//perfect match
-				toValidate.setConcreateExecuted();
-				toValidate.increaseTryCount();
-				this.model.update(toValidate, result.resultedLayout);
-				this.lastExecutedEvent = toValidate;				
-				this.currentLayout = lastExecutedEvent.getEvent().getDest();
-			}else{
-				Logger.trace("Partial match");
-				//there is missing summaries
-				if(this.eventSummaryDeposit.contains(result.esPair)){
-					//check if the deposit contains it.
-					//does not expect this
-					toValidate.increaseTryCount();
-					EventSummaryPair actualOne = eventSummaryDeposit.checkAndDeposit(result.esPair);
-					actualOne.increaseTryCount();
-					if(actualOne.isConcreateExecuted() == false){
-						this.model.update(actualOne, result.resultedLayout);
-						actualOne.setConcreateExecuted();
-					}
-					this.lastExecutedEvent = actualOne;
-					this.currentLayout = lastExecutedEvent.getEvent().getDest();
-				}else{//this is new as the deposit does not contain it
-					//update first
-					toValidate.increaseTryCount();
-					toValidate.setIgnored();
-					eventSummaryDeposit.deposit(result.esPair);
-					result.esPair.increaseTryCount();
-					model.update(result.esPair, result.resultedLayout);
-					result.esPair.setConcreateExecuted();
-					this.lastExecutedEvent = result.esPair;
-					this.currentLayout = lastExecutedEvent.getEvent().getDest();
-					
-					//create more symbolic
-					List<String> remain = result.methodRoots.subList(toValidate.getMethodRoots().size(), result.methodRoots.size());
-					//create new symbolic summary
-					List<List<WrappedSummary>> listCandidates = this.findSummaryCandidates(remain);
-					List<List<WrappedSummary>> partialPermutation = Utility.permutate(listCandidates);
-					List<EventSummaryPair> permutatedList = new ArrayList<EventSummaryPair>();
-					Set<EventSummaryPair> set = this.eventSummaryDeposit.getSet(toValidate.getEvent());
-					for(int i =0; i< permutatedList.size(); i++){
-						List<WrappedSummary> partial = partialPermutation.get(i);
-						List<WrappedSummary> connected = new ArrayList<WrappedSummary>(toValidate.getSummaryList());
-						connected.addAll(partial);
-						if(result.esPair.hasExactTheSameExecutionLog(connected)) continue;
-						EventSummaryPair candidate = new EventSummaryPair(toValidate.getEvent().clone(),connected, result.methodRoots);
-						if(set.add(candidate)){ permutatedList.add(candidate); }
-					}
-					this.newValidationEvent = permutatedList;
-				}
-			}
-		}else{ //less method or mix method
-			//does not generate any new symbolic esPair
-			//assume not new method could occur in the list
-			toValidate.increaseTryCount();
-			EventSummaryPair actualOne = eventSummaryDeposit.checkAndDeposit(result.esPair);
-			actualOne.increaseTryCount();
-			if(actualOne.isConcreateExecuted() == false){
-				this.model.update(actualOne, result.resultedLayout);
-				actualOne.setConcreateExecuted();
-			}
-			this.lastExecutedEvent = actualOne;
-			this.currentLayout = lastExecutedEvent.getEvent().getDest();
-		}
+//		boolean knownBranchFullyMatches = true;
+//		if( result.methodRoots.size() < toValidate.getMethodRoots().size() ){
+//			knownBranchFullyMatches = false;
+//		}else{
+//			for(int i =0;i<toValidate.getMethodRoots().size(); i++){
+//				WrappedSummary sum1= toValidate.getSummaryList().get(i);
+//				WrappedSummary sum2 = result.esPair.getSummaryList().get(i);
+//				//check perfect match for the first few
+//				if(sum1 == null){ if(sum2 != null){ knownBranchFullyMatches = false; break; }
+//				}else{ if(!sum1.equals(sum2)){ knownBranchFullyMatches = false; break; }}
+//			}
+//		}
+//		Logger.trace("knownBranchFullyMatches: "+knownBranchFullyMatches);
+//		if(knownBranchFullyMatches){
+//			if(result.methodRoots.size() == toValidate.getMethodRoots().size()){
+//				Logger.trace("Perfect match");
+//				//perfect match
+//				toValidate.setConcreateExecuted();
+//				toValidate.increaseTryCount();
+//				this.model.update(toValidate, result.resultedLayout);
+//				this.lastExecutedEvent = toValidate;				
+//				this.currentLayout = lastExecutedEvent.getEvent().getDest();
+//			}else{
+//				Logger.trace("Partial match");
+//				//there is missing summaries
+//				if(this.eventSummaryDeposit.contains(result.esPair)){
+//					//check if the deposit contains it.
+//					//does not expect this
+//					toValidate.increaseTryCount();
+//					EventSummaryPair actualOne = eventSummaryDeposit.checkAndDeposit(result.esPair);
+//					actualOne.increaseTryCount();
+//					if(actualOne.isConcreateExecuted() == false){
+//						this.model.update(actualOne, result.resultedLayout);
+//						actualOne.setConcreateExecuted();
+//					}
+//					this.lastExecutedEvent = actualOne;
+//					this.currentLayout = lastExecutedEvent.getEvent().getDest();
+//				}else{//this is new as the deposit does not contain it
+//					//update first
+//					toValidate.increaseTryCount();
+//					toValidate.setIgnored();
+//					eventSummaryDeposit.deposit(result.esPair);
+//					result.esPair.increaseTryCount();
+//					model.update(result.esPair, result.resultedLayout);
+//					result.esPair.setConcreateExecuted();
+//					this.lastExecutedEvent = result.esPair;
+//					this.currentLayout = lastExecutedEvent.getEvent().getDest();
+//					
+//					//create more symbolic
+//					List<String> remain = result.methodRoots.subList(toValidate.getMethodRoots().size(), result.methodRoots.size());
+//					//create new symbolic summary
+//					List<List<WrappedSummary>> listCandidates = this.findSummaryCandidates(remain);
+//					List<List<WrappedSummary>> partialPermutation = Utility.permutate(listCandidates);
+//					List<EventSummaryPair> permutatedList = new ArrayList<EventSummaryPair>();
+//					Set<EventSummaryPair> set = this.eventSummaryDeposit.getSet(toValidate.getEvent());
+//					for(int i =0; i< permutatedList.size(); i++){
+//						List<WrappedSummary> partial = partialPermutation.get(i);
+//						List<WrappedSummary> connected = new ArrayList<WrappedSummary>(toValidate.getSummaryList());
+//						connected.addAll(partial);
+//						if(result.esPair.hasExactTheSameExecutionLog(connected)) continue;
+//						EventSummaryPair candidate = new EventSummaryPair(toValidate.getEvent().clone(),connected, result.methodRoots);
+//						if(set.add(candidate)){ permutatedList.add(candidate); }
+//					}
+//					this.newValidationEvent = permutatedList;
+//				}
+//			}
+//		}else{ //less method or mix method
+//			//does not generate any new symbolic esPair
+//			//assume not new method could occur in the list
+//			toValidate.increaseTryCount();
+//			EventSummaryPair actualOne = eventSummaryDeposit.checkAndDeposit(result.esPair);
+//			actualOne.increaseTryCount();
+//			if(actualOne.isConcreateExecuted() == false){
+//				this.model.update(actualOne, result.resultedLayout);
+//				actualOne.setConcreateExecuted();
+//			}
+//			this.lastExecutedEvent = actualOne;
+//			this.currentLayout = lastExecutedEvent.getEvent().getDest();
+//		}
 	}
 
 	@Override
 	public void onFinish() {
-		Map<Event, Set<EventSummaryPair>> internalDeposit = this.eventSummaryDeposit.getInternalDeposit();
+//		Map<Integer, List<EventSummaryPair>> internalDeposit = this.eventSummaryDeposit.getInternalData();
 		int totalValidated = 0, totalPairs = 0;
-		for(Entry<Event, Set<EventSummaryPair>> entry : internalDeposit.entrySet()){
-			Event event = entry.getKey();
-			Set<EventSummaryPair> set = entry.getValue();
+//		for(Entry<Integer, List<EventSummaryPair>> entry : internalDeposit.entrySet()){
+//			Set<EventSummaryPair> set = entry.getValue();
+//			int validated = 0;
+//			Iterator<EventSummaryPair> iter = set.iterator();
+//			while(iter.hasNext()){
+//				if(iter.next().isConcreateExecuted()){
+//					validated += 1;
+//				}
+//			}
+//			System.out.println(event+"; "+validated+" validated / "+set.size());
+//			totalValidated += validated;
+//			totalPairs += set.size();
+//		}
+		
+		
+//		List<InternalPair> ipList
+//		public Map<Integer,List<EventSummaryPair>>
+		
+		for(Entry<Integer, List<EventSummaryPair>> entry : this.eventSummaryDeposit.data.entrySet()){
+			List<EventSummaryPair> set = entry.getValue();
 			int validated = 0;
 			Iterator<EventSummaryPair> iter = set.iterator();
 			while(iter.hasNext()){
@@ -304,12 +363,10 @@ public class DualDeviceOperation extends AbstractOperation {
 					validated += 1;
 				}
 			}
-			System.out.println(event+"; "+validated+" validated / "+set.size());
 			totalValidated += validated;
 			totalPairs += set.size();
 		}
-		
-		System.out.println("Total Events: "+internalDeposit.keySet().size()+" ");
+
 		System.out.println("Total event path summary pairs: "+totalPairs+" ");
 		System.out.println("Validated: "+totalValidated+" ");	
 	}
@@ -507,7 +564,6 @@ public class DualDeviceOperation extends AbstractOperation {
 	 */
 	private List<EventSummaryPair> filterConstructAndDesposit(List<List<WrappedSummary>> potentialCombination, Event event, List<String> methodRoots,  EventSummaryPair known){
 		List<EventSummaryPair> result = new ArrayList<EventSummaryPair>();
-		Set<EventSummaryPair> generatedSet = this.eventSummaryDeposit.getSet(event);
 		if(potentialCombination == null) return null;
 		for(List<WrappedSummary> wrappedList : potentialCombination){
 			boolean hasSameExecutionLog = known.hasExactTheSameExecutionLog(wrappedList);
@@ -516,7 +572,7 @@ public class DualDeviceOperation extends AbstractOperation {
 			EventSummaryPair esPair = new EventSummaryPair(event.clone(), wrappedList, methodRoots);
 			List<Expression> constraints = esPair.getCombinedConstraint();
 			if(constraints == null || constraints.isEmpty()) continue;
-			if(generatedSet.add(esPair)){
+			if(this.eventSummaryDeposit.deposit(esPair)){
 				result.add(esPair);//new one 
 			}
 		}
@@ -565,6 +621,11 @@ public class DualDeviceOperation extends AbstractOperation {
 		 */
 		WindowOverview winOverview = collector_viewDevice.getWindowOverview();
 		WindowInformation focusedWin = winOverview.getFocusedWindow();
+		while(focusedWin == null){
+			try { Thread.sleep(20); } catch (InterruptedException e) { }
+			focusedWin = collector_viewDevice.getWindowOverview().getFocusedWindow();
+		}
+		
 		int scope = focusedWin.isWithinApplciation(this.app);
 		GraphicalLayout resultedLayout = null;
 		boolean inputMethodVisible = winOverview.isKeyboardVisible();
@@ -575,13 +636,15 @@ public class DualDeviceOperation extends AbstractOperation {
 		}break;
 		case WindowInformation.SCOPE_WITHIN: {
 			Logger.trace("window is within the application");
-			resultedLayout = new GraphicalLayout(focusedWin.actName,
-					viewInfoView.loadWindowData());
+			resultedLayout = model.findSameOrAddLayout(focusedWin.actName, viewInfoView.loadWindowData());
+//					new GraphicalLayout(focusedWin.actName,
+//					viewInfoView.loadWindowData());
 			if (inputMethodVisible) { closeKeyboard(); }
 		}break;
 		case WindowInformation.SCOPE_OUT: {
 			Logger.trace("window is outside the application");
-			resultedLayout = new GraphicalLayout(focusedWin.actName, null);
+			resultedLayout = model.findSameOrAddLayout(focusedWin.actName, viewInfoView.loadWindowData());
+//			resultedLayout = new GraphicalLayout(focusedWin.actName, null);
 		}break;
 		}
 
@@ -606,6 +669,7 @@ public class DualDeviceOperation extends AbstractOperation {
 			/**
 			 * There is method call information. Map them to some summaries and generate validation sequences
 			 */
+			Logger.trace("Setup BPs");
 			bpReader.setup(app, methodRoots);
 			Thread t = new Thread(new Runnable(){
 				@Override public void run() { jdbDeviceExecuter.applyEvent(event); }
@@ -613,7 +677,11 @@ public class DualDeviceOperation extends AbstractOperation {
 			t.start();
 			try { Thread.sleep(400); } catch (InterruptedException e1) { }
 			List<List<String>> logSequences = bpReader.readExecLog();
-			try { t.join(); } catch (InterruptedException e) { e.printStackTrace(); }
+			try { t.join(200); } catch (InterruptedException e) { e.printStackTrace(); }
+			if(t.isAlive()){ 
+				t.setPriority(Thread.MIN_PRIORITY);
+				t.interrupt();}
+			Logger.trace("Thread existed");
 			if (inputMethodVisible) { jdbDeviceExecuter.applyEvent(closeKeyboardEvent); }
 			
 			
@@ -648,7 +716,29 @@ public class DualDeviceOperation extends AbstractOperation {
 		result.methodRoots = methodRoots;
 		result.resultedLayout = resultedLayout;
 		result.esPair = actualPair;
+		Logger.trace("End");
 		return result;
+	}
+	
+	private List<List<WrappedSummary>> linearHelper(List<List<WrappedSummary>> candidateList){
+		List<List<WrappedSummary>> result = new ArrayList<List<WrappedSummary>>();
+		for(List<WrappedSummary> list : candidateList){
+			for(WrappedSummary element : list){
+				List<WrappedSummary> local = new ArrayList<WrappedSummary>();
+				local.add(element);
+				result.add(local);
+			}
+		}
+		return result;
+	}
+	
+	private boolean validationComparionUnderLinearPolicy(ExecutionResult result, EventSummaryPair toValidate){
+		EventSummaryPair resultPair = result.esPair;
+		if(resultPair.getSummaryList() == null || resultPair.getSummaryList().isEmpty()) return false;
+		for(WrappedSummary sum : toValidate.getSummaryList()){
+			if(!resultPair.getSummaryList().contains(sum)) return false;
+		}
+		return true;
 	}
 	
 	private class ExecutionResult{

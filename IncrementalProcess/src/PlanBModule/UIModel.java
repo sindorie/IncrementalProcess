@@ -201,7 +201,10 @@ public class UIModel {
 
 	public void update(EventSummaryPair edge, GraphicalLayout dest) {
 		GraphicalLayout source = edge.getEvent().getSource();
-		GraphicalLayout resultedLayout = findSameOrAddLayout(dest);
+		
+		/*Changed*/
+		GraphicalLayout resultedLayout = dest; //findSameOrAddLayout(dest);
+		
 		if(source.equals(resultedLayout)){
 			addLoopEdge(source, edge);
 			edge.getEvent().setDest(source);
@@ -260,6 +263,16 @@ public class UIModel {
 		return newLay;
 	}
 	
+	public GraphicalLayout findLayout(String actName, LayoutNode node){
+		List<GraphicalLayout> layList = actLayouts.get(actName);
+		for(GraphicalLayout lay : layList){
+			if(lay.hasTheSmaeLayout(node)){
+				return lay;
+			}
+		}
+		return null;
+	}
+	
 	public GraphicalLayout findSameOrAddLayout(GraphicalLayout layout){
 		List<GraphicalLayout> layList = actLayouts.get(layout.getActName());
 		if(layList != null){
@@ -282,6 +295,8 @@ public class UIModel {
 		}
 		layList.add(layout);
 		
+		if(layout.getRootNode() == null) return;
+		
 		//TODO to improve  
 		/*
 		 * Only the Click events are implemented at this point
@@ -302,7 +317,7 @@ public class UIModel {
 		 * 	a. if the node is focusable
 		 * 	b. if the node is focused
 		 */
-		if(this.actLayouts.values().size() < LAYOUT_MAX_AMOUNT){
+		if(this.actLayouts.values().size() < LAYOUT_MAX_AMOUNT ){
 			final List<Event> toAdd = new ArrayList<Event>();
 			
 			/*

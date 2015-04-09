@@ -9,6 +9,7 @@ import java.util.List;
 
 import javax.swing.JFrame;
 import javax.swing.JTree;
+import javax.swing.tree.TreeNode;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
@@ -18,8 +19,9 @@ import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 import components.system.Configuration;
-
 import support.Logger;
+import support.TreeUtility;
+import support.TreeUtility.Searcher;
  
 
 public class ViewDeviceInfo { 
@@ -27,6 +29,11 @@ public class ViewDeviceInfo {
 	String adb;
 	LayoutNode mRootNode;
 	boolean enableGUIDebug = true;
+	
+	private static String classBlackList = 
+			"android.webkit.WebView"
+			;
+	
 	
 	public ViewDeviceInfo(String serial){
 		this.serial = serial;
@@ -117,6 +124,8 @@ public class ViewDeviceInfo {
                 			+attributes.getValue("", "bounds")+" "
                 			+attributes.getValue("", "text")
                 			);
+                	
+                	
                     for (int i = 0; i < attributes.getLength(); i++) {
                         tmpNode.addAtrribute(attributes.getQName(i), attributes.getValue(i));
                     }
@@ -152,11 +161,31 @@ public class ViewDeviceInfo {
             parser.parse(xmlFile, handler);
         } catch (SAXException e) {
             e.printStackTrace();
+        
             return null;
         } catch (IOException e) {
             e.printStackTrace();
             return null;
         }
+        //filter unnecessary Node
+        
+        TreeUtility.breathFristSearch(this.mRootNode, new Searcher(){
+			@Override
+			public int check(TreeNode node) {
+				if(node != null){
+					LayoutNode lay = (LayoutNode)node;
+					if(lay.className != null){
+						if(classBlackList.contains(lay.className)){
+							lay.removeAllChildren();
+							return Searcher.SKIP;
+						}
+					}
+				}
+				return Searcher.NORMAL;
+			}
+        });
+        
+        
         return mRootNode;
 	}
 	
