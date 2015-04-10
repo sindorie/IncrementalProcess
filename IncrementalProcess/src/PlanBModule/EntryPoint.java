@@ -38,16 +38,17 @@ public class EntryPoint {
 		
 		String prefix = "/home/zhenxu/workspace/APK/";
 		String path = 
-//				"Dragon.apk";
+//				"Dragon.apk";	
 //				"TestProcedure.apk";
 //				"Beta1.apk";
 //				"CalcA.apk";
 //		"backupHelper.apk";
 //				"Dragon-v2.apk";
 //		"net.mandaria.tippytipper.apk";
-			"TestField.apk";
+//			"TestField.apk";
+		"Dragon_double.apk";
 		
-		
+		boolean force = false;
 		
 		String[] targets = {
 //				"com.example.dragon.MainActivity:119",
@@ -74,7 +75,7 @@ public class EntryPoint {
 		}else{ System.out.println("Serial: "+Arrays.toString(serials)); }
 
 		setupLogger();
-		StaticApp app = StaticInfo.initAnalysis(prefix+path, false);
+		StaticApp app = StaticInfo.initAnalysis(prefix+path, force);
 		UIModel model = new UIModel();
 		DualDeviceOperation operater = new DualDeviceOperation(app, model, serials[0], serials[1]);
 		DepthFirstManager manager = new DepthFirstManager(app, model);

@@ -1,6 +1,7 @@
 package PlanBModule;
 
 import java.util.List;
+import java.util.Set;
 
 import staticFamily.StaticApp;
 import components.Event;
@@ -70,7 +71,7 @@ public abstract class AbstractOperation {
 	public abstract List<Event> getLatestSequence();
 	
 	
-	
+	public abstract Set<String> getLatestLineHit();
 	
 	public void setManager(AbstractManager manager){
 		this.manager = manager;

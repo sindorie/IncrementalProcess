@@ -5,11 +5,13 @@ import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.PriorityQueue;
+import java.util.Set;
 import java.util.Stack;
 import java.util.Comparator;
 
@@ -25,6 +27,7 @@ import javax.swing.table.DefaultTableModel;
 
 import staticFamily.StaticApp;
 import support.Logger;
+import symbolic.Expression;
 import components.Event;
 import components.EventFactory;
 import components.EventSummaryPair;
@@ -50,6 +53,7 @@ public class DepthFirstManager extends AbstractManager{
 	/*
 	 * data recording field 
 	 */
+	private Set<String> lineHit;
 	private int totalConcreateExecution = 0, newConcreteExecution = 0, executionCount = 0;
 	private int maxIndividualValidationTry = 5;
 	private int iterationCount = 0;
@@ -90,6 +94,7 @@ public class DepthFirstManager extends AbstractManager{
 					return super.add(esPair);
 				}
 			};
+			lineHit = new HashSet<String>();
 		}else{
 			final JPanel pane = new JPanel();
 			pane.setLayout(new GridLayout(0,1));
@@ -140,6 +145,16 @@ public class DepthFirstManager extends AbstractManager{
 			JScrollPane confiemdContainer = new JScrollPane(); 
 			JScrollPane ignoedContainer = new JScrollPane();
 			
+			TitledBorder targetQueueTitle = BorderFactory.createTitledBorder("Target Queue");
+			TitledBorder validationQueueTitle = BorderFactory.createTitledBorder("Validation Queue");
+			TitledBorder confirmedListTitle = BorderFactory.createTitledBorder("Confirmed list");
+			TitledBorder ignoredListTitle = BorderFactory.createTitledBorder("Ignored list");
+			
+			targetContainer.setBorder(targetQueueTitle);
+			validationContainer.setBorder(validationQueueTitle);
+			confiemdContainer.setBorder(confirmedListTitle);
+			ignoedContainer.setBorder(ignoredListTitle);
+			
 			targetArea = new JTextArea();
 			validArea = new JTextArea();
 			JTextArea confirmArea = new JTextArea();
@@ -174,11 +189,15 @@ public class DepthFirstManager extends AbstractManager{
 				public boolean add(EventSummaryPair esPair){
 					if(esPair.getTryCount() >= maxIndividualValidationTry){
 						ignoredList.add(esPair);
-					}else{
-						super.add(esPair);
-					}
+					}else{ super.add(esPair); }
 					updateTargetQueuePane();
 					return true;
+				}
+				@Override
+				public EventSummaryPair poll(){
+					EventSummaryPair result = super.poll();
+					updateTargetQueuePane();
+					return result;
 				}
 			};
 			validationQueue = new PriorityQueue<EventSummaryPair>(new ESPriority()){
@@ -186,15 +205,44 @@ public class DepthFirstManager extends AbstractManager{
 				public boolean add(EventSummaryPair esPair){
 					if(esPair.getTryCount() >= maxIndividualValidationTry){
 						ignoredList.add(esPair);
-					}else{
-						super.add(esPair);
-					}
+					}else{ super.add(esPair); }
 					updateValidationPane();
 					return true;
+				}
+				@Override
+				public EventSummaryPair poll(){
+					EventSummaryPair result = super.poll();
+					updateValidationPane();
+					return result;
 				}
 			};
 			
 			Logger.registerJPanel("Queue", queuePane);
+			
+			
+			JTabbedPane lineHitPane = new JTabbedPane();
+			Map<String, JTextArea> classCatergoryPane = new HashMap<String, JTextArea>();
+			lineHit = new HashSet<String>(){
+				@Override
+				public boolean add(String line){
+					boolean isAdded = super.add(line);
+					if(isAdded){
+						int index = line.lastIndexOf(":");
+						String className = line.substring(0, index);
+						JTextArea area = classCatergoryPane.get(className);
+						if(area == null){
+							area = new JTextArea();
+							classCatergoryPane.put(className, area);
+							JScrollPane jsp = new JScrollPane();
+							jsp.setViewportView(area);
+							lineHitPane.add(className, jsp);
+						}
+						area.append(line+"\n");
+					}
+					return isAdded;
+				}
+			};
+			Logger.registerJPanel("Line hit", lineHitPane);
 		}
 	}
 	
@@ -220,7 +268,7 @@ public class DepthFirstManager extends AbstractManager{
 				
 				JScrollPane jsp = new JScrollPane();
 				jsp.setViewportView(area);
-				jsp.setPreferredSize(new Dimension(400, 500));
+				jsp.setPreferredSize(new Dimension(400, 100));
 				
 				container.add(jsp);
 				this.targetTextAreas.put(line, area);
@@ -243,7 +291,18 @@ public class DepthFirstManager extends AbstractManager{
 	@Override public void onIterationStepStart() { currentESPair = null; }
 	@Override
 	public Decision decideOperation() {
-		if(isLimitReached()) return Decision.END;
+		if(isLimitReached()){
+			Logger.trace("Limit reached: "+
+						"event limit:"+this.newEventStack.isEmpty() +
+						"Target limit: "+ ((targetQueue == null) || (this.targetQueue.isEmpty()) || (this.targetQueue.peek().getTryCount() > maxIndividualValidationTry))+
+						"ES limit: "+
+						(validationQueue == null ||
+						validationQueue.isEmpty() ||
+						validationQueue.peek().getTryCount() > maxIndividualValidationTry)
+					);
+			
+			return Decision.END;
+		}
 		if(!this.newEventStack.isEmpty()){ 	  return Decision.EXPLORE;
 		}else if(decideReachTarget()){ 		  return Decision.REACHTARGET;
 		}else if(!validationQueue.isEmpty()){ return Decision.EXPAND;
@@ -279,27 +338,37 @@ public class DepthFirstManager extends AbstractManager{
 		}		
 		// Check from the Operator if there is any new summary which needs to be validated
 		List<EventSummaryPair> toValidateList = operater.getAdditionalValidationEvents();
+		int valCount = 0;
 		if(toValidateList != null && !toValidateList.isEmpty()){
 			for(EventSummaryPair esPair : toValidateList){
-				if(this.targets != null && esPair.getSummaryList() != null){
-					for(WrappedSummary sum : esPair.getSummaryList()){
-						for(String line : this.targets){
-							if(sum.executionLog.contains(line)){
-								esPair.targetLines.add(line);
+				if(checkEventConstraintExistence(esPair)){
+					//such event constraint pair exist
+					Logger.trace("Ignored: "+esPair);
+				}else{
+					//it is new
+					if(this.targets != null && esPair.getSummaryList() != null){
+						for(WrappedSummary sum : esPair.getSummaryList()){
+							for(String line : this.targets){
+								if(sum.executionLog.contains(line)){
+									esPair.targetLines.add(line);
+								}
 							}
 						}
 					}
+					if(esPair.targetLines.size() > 0){ this.targetQueue.add(esPair);
+					}else{ validationQueue.add(esPair); }
+					valCount += 1;
 				}
-				if(esPair.targetLines.size() > 0){ this.targetQueue.add(esPair);
-				}else{ validationQueue.add(esPair); }
 			}
 		}
+		Logger.trace("Added validation count: "+valCount);
 
 		//An event summary is ignored due to the incompleteness of summary list
 		//the current esPair is null iff it was an exploration operation
 		if(this.currentESPair != null && !this.currentESPair.isIgnored()){
 			if(this.currentESPair.isIgnored()){
-				
+				//do not queue it back
+				this.ignoredList.add(currentESPair);
 			}else if(!currentESPair.isConcreateExecuted()){
 				//not concrete execution, check if it still contain useful target
 				boolean containUnreachedTarget = false;
@@ -312,7 +381,15 @@ public class DepthFirstManager extends AbstractManager{
 				if(containUnreachedTarget){ //and not concrete executed
 					this.targetQueue.add(currentESPair);
 				}else{ this.validationQueue.add(currentESPair); }
+			}else{
+				confirmedList.add(currentESPair);
 			}
+		}
+		
+		Set<String> lastestLineHit = this.operater.getLatestLineHit();
+		if(lastestLineHit != null){
+			Iterator<String> lineIter = lastestLineHit.iterator();
+			while(lineIter.hasNext()){ this.lineHit.add(lineIter.next()); }
 		}
 		
 		//Check the actual event summary which occurred. 
@@ -340,23 +417,23 @@ public class DepthFirstManager extends AbstractManager{
 
 	/**Miscellaneous helper**/
 	
-	/* TODO Under construction section */
-	
 	private boolean isLimitReached(){
 		if(newEventStack == null) return false;
-		
+
 		boolean eventLimit = this.newEventStack.isEmpty();
-				
-		boolean targetLimit =
-				(targetQueue == null) ||
-				(this.targetQueue.isEmpty()) ||
-				(this.targetQueue.peek().getTryCount() > maxIndividualValidationTry);
-				
 		boolean valLimit = 
 				validationQueue == null ||
 				validationQueue.isEmpty() ||
 				validationQueue.peek().getTryCount() > maxIndividualValidationTry;
-		return (eventLimit && targetLimit && valLimit);
+		boolean result = eventLimit && valLimit;
+		if(this.isTargetSet()){
+			boolean targetLimit =
+					(targetQueue == null) ||
+					(this.targetQueue.isEmpty()) ||
+					(this.targetQueue.peek().getTryCount() > maxIndividualValidationTry);
+			result = valLimit && targetLimit;
+		}
+		return result;
 	}
 	
 	/**
@@ -388,7 +465,7 @@ public class DepthFirstManager extends AbstractManager{
 	}
 
 	private boolean isTargetSet(){
-		return this.targets != null;
+		return this.targets != null && targets.length > 0;
 	}
 	
 	/**
@@ -455,6 +532,7 @@ public class DepthFirstManager extends AbstractManager{
 				sb.append(iter.next().toString()+"\n");
 			}
 			this.targetArea.setText(sb.toString());
+			this.targetArea.revalidate();
 		}
 	}
 	
@@ -466,6 +544,30 @@ public class DepthFirstManager extends AbstractManager{
 				sb.append(iter.next().toString()+"\n");
 			}
 			this.validArea.setText(sb.toString());
+			this.validArea.revalidate();
 		}
+	}
+	
+	private Map<String, Set<Set<String>>> ecExistence = new HashMap<String,Set<Set<String>>>();
+	/**
+	 * Check the existence of event-constraint pair
+	 * @param esPair
+	 * @return true if exist
+	 */
+	private boolean checkEventConstraintExistence(EventSummaryPair esPair){
+		Event event = esPair.getEvent();
+		String key = event.toString()+event.getSource();
+		Set<Set<String>> constraintSet = ecExistence.get(key);
+		if(constraintSet == null){//first encounter
+			constraintSet = new HashSet<Set<String>>();
+			ecExistence.put(key, constraintSet);
+		}
+		List<Expression> constraints = esPair.getCombinedConstraint();
+		Set<String> organizedConstraint = new HashSet<String>();
+		for(Expression expre : constraints){
+			String expString = expre.toYicesStatement();
+			organizedConstraint.add(expString);
+		}
+		return !constraintSet.add(organizedConstraint);
 	}
 }

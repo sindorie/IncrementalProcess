@@ -99,8 +99,12 @@ public class EventSummaryDeposit implements Serializable{
 		return index >= 0;
 	}
 
+	/**
+	 * @param esPair
+	 * @return true - if the input is new
+	 */
 	public boolean deposit(EventSummaryPair esPair){
-		return this.findOrConstruct(esPair) != esPair;
+		return this.findOrConstruct(esPair) == esPair;
 	}
 	
 	

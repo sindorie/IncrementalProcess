@@ -2,6 +2,7 @@ package components;
 
 import java.awt.Component;
 import java.awt.Container;
+import java.awt.Dimension;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -16,6 +17,7 @@ import javax.swing.DefaultListModel;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JList; 
+import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
@@ -167,6 +169,7 @@ public class WrappedSummary {
 		model_raw = new DefaultListModel<PathSummary>();
 		
 		final JList<PathSummary> leftList = new JList<PathSummary>();
+//		leftList.setPreferredSize(new Dimension());
 		leftList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		leftList.setModel(model_raw);
 		leftList.setCellRenderer(new DefaultListCellRenderer() {
@@ -181,7 +184,8 @@ public class WrappedSummary {
 		leftScroll.setViewportView(leftList);
 		
 		
-		final Container rightSummaryContainer = new Container();
+		final JPanel rightSummaryContainer = new JPanel();
+		rightSummaryContainer.setAlignmentX(0);
 		BoxLayout layout = new BoxLayout(rightSummaryContainer, BoxLayout.Y_AXIS);
 		rightSummaryContainer.setLayout(layout);
 		JScrollPane rightContainer = new JScrollPane();
@@ -203,14 +207,19 @@ public class WrappedSummary {
 						
 						String toShow = String.join("\n", sum.getExecutionLog());
 						JTextArea area = new JTextArea();
+						JScrollPane areaScroll = new JScrollPane();
+						areaScroll.setSize(500, 200);
+						areaScroll.setViewportView(area);
 						area.setText(toShow);
-						rightSummaryContainer.add(area);
+						rightSummaryContainer.add(areaScroll);
 						
 						rightSummaryContainer.add(new JLabel(String.format("Constraints: ")));
 						for(Expression expre : sum.getPathConditions()){
 							rightSummaryContainer.add(new JLabel("<html>"+expre.toYicesStatement()+"</html>"));
 							JTree tree = new JTree(expre);
-							rightSummaryContainer.add(tree);
+							JScrollPane treeScroll = new JScrollPane();
+							treeScroll.setViewportView(tree);
+							rightSummaryContainer.add(treeScroll);
 							TreeUtility.expandJTree(tree, -1);
 						}
 						rightSummaryContainer.add(new JLabel(String.format("Constraints variables: ")));
@@ -226,7 +235,9 @@ public class WrappedSummary {
 						for(Expression expre : sum.getSymbolicStates()){
 							rightSummaryContainer.add(new JLabel("<html>"+expre.toYicesStatement()+"</html>"));
 							JTree tree = new JTree(expre);
-							rightSummaryContainer.add(tree);
+							JScrollPane treeScroll = new JScrollPane();
+							treeScroll.setViewportView(tree);
+							rightSummaryContainer.add(treeScroll);
 							TreeUtility.expandJTree(tree, -1);
 						}
 						rightSummaryContainer.add(new JLabel(String.format("Symbolic variables: ")));
@@ -237,7 +248,6 @@ public class WrappedSummary {
 								rightSummaryContainer.add(varLabel);
 							}
 						}
-						
 						rightSummaryContainer.revalidate();
 					}
 				}
@@ -270,7 +280,8 @@ public class WrappedSummary {
 		JScrollPane leftScroll = new JScrollPane();
 		leftScroll.setViewportView(wSumList);
 		
-		final Container rightSummaryContainer = new Container();
+		final JPanel rightSummaryContainer = new JPanel();
+		rightSummaryContainer.setAlignmentX(0);
 		BoxLayout layout = new BoxLayout(rightSummaryContainer, BoxLayout.Y_AXIS);
 		rightSummaryContainer.setLayout(layout);
 		JScrollPane rightContainer = new JScrollPane();
@@ -291,14 +302,19 @@ public class WrappedSummary {
 					
 					String toShow = String.join("\n", sum.executionLog);
 					JTextArea area = new JTextArea();
+					JScrollPane areaScroll = new JScrollPane();
+					areaScroll.setViewportView(area);
+					areaScroll.setSize(500, 200);
 					area.setText(toShow);
-					rightSummaryContainer.add(area);
+					rightSummaryContainer.add(areaScroll);
 					
 					rightSummaryContainer.add(new JLabel(String.format("Constraints: ")));
 					for(Expression expre : sum.constraints){
 						rightSummaryContainer.add(new JLabel("<html>"+expre.toYicesStatement()+"</html>"));
 						JTree tree = new JTree(expre);
-						rightSummaryContainer.add(tree);
+						JScrollPane treeScroll = new JScrollPane();
+						treeScroll.setViewportView(tree);
+						rightSummaryContainer.add(treeScroll);
 						TreeUtility.expandJTree(tree, -1);
 					}
 					rightSummaryContainer.add(new JLabel(String.format("Constraints variables: ")));
@@ -320,9 +336,10 @@ public class WrappedSummary {
 							);
 						symVarSet.addAll(variable.getUniqueVarSet());
 						symVarSet.addAll(value.getUniqueVarSet());
-						
 						JTree tree = new JTree(value);
-						rightSummaryContainer.add(tree);
+						JScrollPane treeScroll = new JScrollPane();
+						treeScroll.setViewportView(tree);
+						rightSummaryContainer.add(treeScroll);
 						TreeUtility.expandJTree(tree, -1);
 					}
 					

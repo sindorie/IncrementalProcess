@@ -2,6 +2,7 @@ package PlanBModule;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -58,6 +59,7 @@ public class DualDeviceOperation extends AbstractOperation {
 	private EventSummaryDeposit eventSummaryDeposit;
 	private List<EventSummaryPair> newValidationEvent;
 	private Map<String, List<WrappedSummary>> methodSigToSummaries;
+	private Set<String> latestLineHit;
 	
 	/*
 	 * Operation fields
@@ -391,6 +393,13 @@ public class DualDeviceOperation extends AbstractOperation {
 		return this.eventDeposit.getLastestEventSequnce();
 	}
 	
+	@Override
+	public Set<String> getLatestLineHit() {
+		Set<String> result = this.latestLineHit;
+		this.latestLineHit = null;
+		return result;
+	}
+	
 	/**
 	 * Try to select the best candidate out of the summary candidates for a method
 	 * @param mappedSummaryCandidates -- a list of candidates for a list of method roots
@@ -677,13 +686,22 @@ public class DualDeviceOperation extends AbstractOperation {
 			t.start();
 			try { Thread.sleep(400); } catch (InterruptedException e1) { }
 			List<List<String>> logSequences = bpReader.readExecLog();
+			if(logSequences != null && !logSequences.isEmpty()){
+				Set<String> lineHit = new HashSet<String>();
+				for(List<String> subList : logSequences){
+					for(String line : subList){
+						lineHit.add(line);
+					}
+				}
+				latestLineHit = lineHit;
+			}
+			
 			try { t.join(200); } catch (InterruptedException e) { e.printStackTrace(); }
 			if(t.isAlive()){ 
 				t.setPriority(Thread.MIN_PRIORITY);
 				t.interrupt();}
 			Logger.trace("Thread existed");
 			if (inputMethodVisible) { jdbDeviceExecuter.applyEvent(closeKeyboardEvent); }
-			
 			
 			List<WrappedSummary> mappedList = new ArrayList<WrappedSummary>();
 			for(int i = 0 ; i< mappedSummaryCandidatesList.size() && i< logSequences.size(); i++){
@@ -748,4 +766,6 @@ public class DualDeviceOperation extends AbstractOperation {
 		List<String> executionLog;
 		GraphicalLayout resultedLayout;
 	}
+
+
 }
