@@ -181,6 +181,7 @@ public class DualDeviceOperation extends AbstractOperation {
 	public void onExpansionProcess(EventSummaryPair toValidate) {
 		if(toValidate.isConcreateExecuted()) return;
 		if(!this.eventSummaryDeposit.contains(toValidate)){
+			Logger.trace(toValidate.toString());
 			throw new AssertionError();
 		}
 		
@@ -336,35 +337,15 @@ public class DualDeviceOperation extends AbstractOperation {
 
 	@Override
 	public void onFinish() {
-//		Map<Integer, List<EventSummaryPair>> internalDeposit = this.eventSummaryDeposit.getInternalData();
 		int totalValidated = 0, totalPairs = 0;
-//		for(Entry<Integer, List<EventSummaryPair>> entry : internalDeposit.entrySet()){
-//			Set<EventSummaryPair> set = entry.getValue();
-//			int validated = 0;
-//			Iterator<EventSummaryPair> iter = set.iterator();
-//			while(iter.hasNext()){
-//				if(iter.next().isConcreateExecuted()){
-//					validated += 1;
-//				}
-//			}
-//			System.out.println(event+"; "+validated+" validated / "+set.size());
-//			totalValidated += validated;
-//			totalPairs += set.size();
-//		}
-		
-		
-//		List<InternalPair> ipList
-//		public Map<Integer,List<EventSummaryPair>>
-		
-		for(Entry<Integer, List<EventSummaryPair>> entry : this.eventSummaryDeposit.data.entrySet()){
+		for(Entry<String, List<EventSummaryPair>> entry : this.eventSummaryDeposit.data.entrySet()){
 			List<EventSummaryPair> set = entry.getValue();
 			int validated = 0;
 			Iterator<EventSummaryPair> iter = set.iterator();
 			while(iter.hasNext()){
-				if(iter.next().isConcreateExecuted()){
-					validated += 1;
-				}
+				if(iter.next().isConcreateExecuted()){ validated += 1; }
 			}
+			System.out.println(entry.getKey()+" : "+validated);
 			totalValidated += validated;
 			totalPairs += set.size();
 		}

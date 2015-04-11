@@ -58,7 +58,7 @@ public class UIModel {
 	private List<Event> eventBuffer;
 	private GraphicalLayout root;
 	private List<EventSummaryPair> edgesReference = new ArrayList<EventSummaryPair>();
-	private Map<EventSummaryPair, SequenceStatus> solvedSummaryRecord = new HashMap<EventSummaryPair, SequenceStatus>();
+	private Map<String, SequenceStatus> solvedSummaryRecord = new HashMap<String, SequenceStatus>();
 	private int LAYOUT_MAX_AMOUNT = 25;
 	
 	public UIModel() {
@@ -179,13 +179,15 @@ public class UIModel {
 	 */
 	public List<Event> solveForEvent(EventSummaryPair edge) {
 		Logger.trace(edge);
-		SequenceStatus list = solvedSummaryRecord.get(edge);
+		String key = edge.getIdentityString();
+		SequenceStatus list = solvedSummaryRecord.get(key);
 		if(list == null){
 			AnchorSolver aSolver = new AnchorSolver(this);
 			aSolver.solve(edge);
 			List<List<Event>> eSeq = aSolver.getResult();
-			if(eSeq == null || eSeq.isEmpty()){ return null; }
+			if(eSeq == null){eSeq = new ArrayList<List<Event>>();}
 			list = new SequenceStatus(eSeq, this);
+			solvedSummaryRecord.put(key, list);
 		}else if(list.needUpdate(this)){
 			AnchorSolver aSolver = new AnchorSolver(this);
 			aSolver.solve(edge);

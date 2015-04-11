@@ -1,6 +1,7 @@
 package PlanBModule;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -59,7 +60,9 @@ public class AnchorSolver {
 		
 		root = new DefaultMutableTreeNode();
 		leaves = new ArrayList<DefaultMutableTreeNode>();
-		InternalEventPair content = new InternalEventPair(esPair,esPair.getCombinedConstraint());
+		Set<Expression> initCumCon = new HashSet<Expression>();
+		initCumCon.addAll(esPair.getCombinedConstraint());
+		InternalEventPair content = new InternalEventPair(esPair,initCumCon);
 		if(debug){
 			Logger.trace("Starting cumulative constraints");
 			for(Expression expre : esPair.getCombinedConstraint()){
@@ -155,7 +158,7 @@ public class AnchorSolver {
 	 * @param cumulativeConstraint
 	 * @return
 	 */
-	private List<InternalEventPair> findCandidate(List<Expression> cumulativeConstraint){
+	private List<InternalEventPair> findCandidate(Set<Expression> cumulativeConstraint){
 		List<InternalEventPair> result = new ArrayList<InternalEventPair>();
 		List<EventSummaryPair> esList = model.getAllEdges();
 		
@@ -179,7 +182,7 @@ public class AnchorSolver {
 			Logger.trace(esPair.getCombinedSymbolic());
 			if(debug)CommandLine.requestInput();
 			
-			List<Expression> updated = isRelatedAndSatisfiable(cumulativeConstraint , esPair);
+			Set<Expression> updated = isRelatedAndSatisfiable(cumulativeConstraint , esPair);
 			if(updated != null){
 				InternalEventPair toAdd = new InternalEventPair(esPair, updated);
 				toAdd.isComplete = isComplete(updated);
@@ -200,7 +203,7 @@ public class AnchorSolver {
 	 * @param candidate -- the 	
 	 * @return
 	 */
-	private List<Expression> isRelatedAndSatisfiable(List<Expression> cumulativeConstraint, EventSummaryPair esPair){
+	private Set<Expression> isRelatedAndSatisfiable(Set<Expression> cumulativeConstraint, EventSummaryPair esPair){
 		
 //		Logger.trace("Vars in Cumulative Constraint");
 //		for(Expression expre : cumulativeConstraint){
@@ -239,7 +242,7 @@ public class AnchorSolver {
 		
 		if(related){
 			//replace the variable
-			List<Expression> conResult = new ArrayList<Expression>();		
+			Set<Expression> conResult = new HashSet<Expression>();		
 			for(Expression cons : cumulativeConstraint){
 				Expression copy = cons.clone();
 				for(Expression var : symCandidate.keySet()){
@@ -295,13 +298,14 @@ public class AnchorSolver {
 	 * @param constraints
 	 * @return
 	 */
-	private boolean isComplete(List<Expression> constraints){
+	private boolean isComplete(Set<Expression> constraints){
 		//TODO to improve 
 		for(Expression expre : constraints){
 			if(!expre.getUniqueVarSet().isEmpty()){
 				return false;
 			}
 		}
+		Logger.trace("IsComplete");
 		return true;
 	}
 	
@@ -377,13 +381,13 @@ public class AnchorSolver {
 	}
 	
 	private class InternalEventPair{
-		InternalEventPair(EventSummaryPair esPair, List<Expression> cumulativeConstraints){
+		InternalEventPair(EventSummaryPair esPair, Set<Expression> cumulativeConstraints){
 			this.esPair = esPair;
 			this.cumulativeConstraints = cumulativeConstraints;
 		}
 		
 		EventSummaryPair esPair;
-		List<Expression> cumulativeConstraints;
+		Set<Expression> cumulativeConstraints;
 		boolean isComplete = false;
 		boolean isFailed = false;
 		

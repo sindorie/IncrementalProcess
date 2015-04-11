@@ -89,7 +89,11 @@ public class WrappedSummary {
 	public boolean equals(Object o){
 		if( o instanceof WrappedSummary){
 			WrappedSummary sum = (WrappedSummary)o;
-			return sum.executionLog.equals(this.executionLog);
+			if(this.executionLog == null){
+				return sum.executionLog == null;
+			}else{
+				return this.executionLog.equals(sum.executionLog);
+			}
 		}
 		return false;
 	}

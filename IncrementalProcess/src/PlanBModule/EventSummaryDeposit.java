@@ -40,76 +40,43 @@ import components.EventSummaryPair;
 public class EventSummaryDeposit implements Serializable{
 	
 	boolean debug = true;
-//	private Map<Event, Set<EventSummaryPair>> deposit = new HashMap<Event,Set<EventSummaryPair> >();
 	private DefaultListModel<EventSummaryPair> listModel;
 	private JLabel infoLabel = new JLabel();
+	public Map<String, List<EventSummaryPair>> data = new HashMap<String, List<EventSummaryPair>>();
 	
-	
-	
-	/**
-	 * Current use a list to manage due to easy implementation
-	 */
-	public List<InternalPair> ipList = new ArrayList<InternalPair>();
-	private int avalIndex = 0;
-	public Map<Integer,List<EventSummaryPair>> data = new HashMap<Integer, List<EventSummaryPair>>();
 	public EventSummaryPair findOrConstruct(EventSummaryPair esPair){
-		Event event = esPair.getEvent();
-		int index = -1;
-		for(int i =0;i<ipList.size();i++){
-			InternalPair ip = ipList.get(i);
-			if(ip.event.toString().equals(event.toString())
-					&& ip.event.getSource().equals(event.getSource())){
-				index = i;break;
+		String key = esPair.getIdentityString();
+		List<EventSummaryPair> list = data.get(key);
+		if(list == null){
+			list = new ArrayList<EventSummaryPair>();
+			data.put(key, list);
+		}
+		for(EventSummaryPair es : list){
+			if(es.hasExactTheSameExecutionLog(esPair.getSummaryList())){
+				return es;
 			}
 		}
-		if(index >= 0){
-			List<EventSummaryPair> esList = data.get(index);
-			EventSummaryPair found = null;
-			for(EventSummaryPair element : esList){
-				if(element.hasExactTheSameExecutionLog(esPair.getSummaryList())){
-					found = element; break;
-				}
-			}
-			if(found == null){
-				esList.add(esPair);
-				found = esPair;
-				if(listModel != null) listModel.addElement(found);
-			}
-			return found;
-		}else{
-			ipList.add(new InternalPair(event.clone(),index));
-			List<EventSummaryPair> esList = new ArrayList<EventSummaryPair>();
-			esList.add(esPair);
-			data.put(avalIndex++, esList);
-			if(listModel != null) listModel.addElement(esPair);
-			return esPair;
-		}
+		list.add(esPair);
+		listModel.addElement(esPair);
+		Logger.trace("Added: "+esPair.toString());
+		return esPair;
+	}
+	public boolean deposit(EventSummaryPair esPair){
+		return findOrConstruct(esPair) == esPair;
 	}
 	
 	public boolean contains(EventSummaryPair esPair){
-		Event event = esPair.getEvent();
-		int index = -1;
-		for(int i =0;i<ipList.size();i++){
-			InternalPair ip = ipList.get(i);
-			if(ip.event.toString().equals(event.toString())
-					&& ip.event.getSource().equals(event.getSource())){
-				index = i;break;
+		String key = esPair.getIdentityString();
+		List<EventSummaryPair> list = data.get(key);
+		if(list != null){
+			for(EventSummaryPair es : list){
+				if(es.hasExactTheSameExecutionLog(esPair.getSummaryList())){
+					return true;
+				}
 			}
 		}
-		return index >= 0;
+		return false;
 	}
-
-	/**
-	 * @param esPair
-	 * @return true - if the input is new
-	 */
-	public boolean deposit(EventSummaryPair esPair){
-		return this.findOrConstruct(esPair) == esPair;
-	}
-	
-	
-	
-	
 	
 	public EventSummaryDeposit(){
 		if(debug){
@@ -151,139 +118,18 @@ public class EventSummaryDeposit implements Serializable{
 			topEdgePane.setRightComponent(edgeDetailContainer);
 			
 			Logger.registerJPanel("es deposit", topEdgePane);
-			
 			infoLabel.setText("Empty list");
-			
 			infoLabel.addMouseListener(new MouseListener(){
-
 				@Override
 				public void mouseClicked(MouseEvent e) {
 					infoLabel.setText("Size: "+listModel.getSize());
 				}
-
-				@Override
-				public void mousePressed(MouseEvent e) {
-					// TODO Auto-generated method stub
-					
-				}
-
-				@Override
-				public void mouseReleased(MouseEvent e) {
-					// TODO Auto-generated method stub
-					
-				}
-
-				@Override
-				public void mouseEntered(MouseEvent e) {
-					// TODO Auto-generated method stub
-					
-				}
-
-				@Override
-				public void mouseExited(MouseEvent e) {
-					// TODO Auto-generated method stub
-					
-				}
-				
+				@Override public void mousePressed(MouseEvent e) {}
+				@Override public void mouseReleased(MouseEvent e) {}
+				@Override public void mouseEntered(MouseEvent e) { }
+				@Override public void mouseExited(MouseEvent e) { }
 			});
 		}
 	}
 	
-	
-//	public Map<Event, Set<EventSummaryPair>> getInternalDeposit(){
-//		return this.deposit;
-//	}
-//	
-//	
-//	/**
-//	 * Deposit the summary
-//	 * @param esPair
-//	 */
-//	public void deposit(EventSummaryPair esPair){
-//		Event event = esPair.getEvent();
-//		Set<EventSummaryPair> set = deposit.get(event);
-//		if(set == null){ 
-//			set = new MyHashSet(); 
-//			deposit.put(event, set);
-//		}
-//		set.add(esPair);
-//	}
-//	
-////	public void depositAll(Event event, List<EventSummaryPair> list){
-////		Set<EventSummaryPair> set = deposit.get(event);
-////		if(set == null){ 
-////			set = new HashSet<EventSummaryPair>(); 
-////			deposit.put(event, set);
-////		}
-////		for(EventSummaryPair esPair : list){
-////			set.add(esPair);
-////		}
-////	}
-//	
-//	public EventSummaryPair checkAndDeposit(EventSummaryPair esPair){
-//		Event event = esPair.getEvent();
-//		Set<EventSummaryPair> set = deposit.get(event);
-//		if(set == null){ 
-//			set = new MyHashSet(); 
-//			deposit.put(event, set);
-//			set.add(esPair);
-//			return esPair;
-//		}else{
-//			Iterator<EventSummaryPair> iter = set.iterator();
-//			while(iter.hasNext()){
-//				EventSummaryPair current = iter.next();
-//				if(current.equals(esPair)) return current;
-//			}
-//			set.add(esPair);
-//			return esPair;
-//		}
-//	}
-//	
-//	/**
-//	 * The result will not be null
-//	 * @param event
-//	 * @return
-//	 */
-//	public Set<EventSummaryPair> getSet(Event event){
-//		Set<EventSummaryPair> set = deposit.get(event);
-//		if(set == null){ 
-//			set = new MyHashSet(); 
-//			deposit.put(event, set);
-//		}
-//		return set;
-//	}
-//	
-//	/**
-//	 * check if existence
-//	 * @param esPair
-//	 * @return
-//	 */
-//	public boolean contains(EventSummaryPair esPair){
-//		Event event = esPair.getEvent();
-//		Set<EventSummaryPair> set = deposit.get(event);
-//		if(set == null){ 
-//			set = new MyHashSet(); 
-//			deposit.put(event, set);
-//			return false;
-//		}
-//		return set.contains(esPair);
-//	}
-//	
-//	private class MyHashSet extends HashSet<EventSummaryPair>{
-//		public boolean add(EventSummaryPair esPair){
-//			if(debug){ 
-//				listModel.addElement(esPair); 
-//				infoLabel.setText("Size: "+listModel.getSize());
-//			}
-//			return super.add(esPair);
-//		}
-//	}
-
-	private class InternalPair{
-		Event event;
-		int index;
-		public InternalPair(Event event, int index){
-			this.event = event;this.index = index;
-		}
-	}
 }

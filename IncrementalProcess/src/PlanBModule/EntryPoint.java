@@ -38,24 +38,26 @@ public class EntryPoint {
 		
 		String prefix = "/home/zhenxu/workspace/APK/";
 		String path = 
+				"Dragon-v1.apk";	
 //				"Dragon.apk";	
 //				"TestProcedure.apk";
 //				"Beta1.apk";
 //				"CalcA.apk";
 //		"backupHelper.apk";
-//				"Dragon-v2.apk";
 //		"net.mandaria.tippytipper.apk";
 //			"TestField.apk";
-		"Dragon_double.apk";
+//		"Dragon_double.apk";
 		
-		boolean force = false;
+		boolean force = true;
+//		boolean force = false;
 		
 		String[] targets = {
-//				"com.example.dragon.MainActivity:119",
-//				"com.example.dragon.SecondLayout:72",
-//				"com.example.dragon.SecondLayout:84",
-//				"com.example.dragon.SecondLayout:79",
-//				"com.example.dragon.SecondLayout:90",
+//				"com.example.dragon.SecondLayout:86",
+				"com.example.dragon.MainActivity:119",
+				"com.example.dragon.SecondLayout:72",
+				"com.example.dragon.SecondLayout:84",
+				"com.example.dragon.SecondLayout:79",
+				"com.example.dragon.SecondLayout:90",
 				
 				
 //				"net.mandaria.tippytipperlibrary.activities.Total:259",

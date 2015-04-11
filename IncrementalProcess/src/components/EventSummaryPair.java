@@ -86,25 +86,25 @@ public class EventSummaryPair extends DefaultEdge{
 	}
 	
 	public boolean hasExactTheSameExecutionLog(List<WrappedSummary> sumList){
-		if(this.summaryList == null) return false;
-		else if(sumList != null && summaryList.size() != this.summaryList.size()) return false;
-		else{
-			for(int i =0;i<sumList.size(); i++){
-				WrappedSummary sum1 = this.summaryList.get(i);
-				WrappedSummary sum2 = sumList.get(i);
-				if(sum1 == null && sum2 == null) continue;
-				if(sum1 != null && !sum1.executionLog.equals(sum2.executionLog)){
-					return false;
-				}
+		if(this.summaryList == null && sumList != null) return false;
+		if(this.summaryList == null && sumList == null) return true;
+		if(summaryList.size() != this.summaryList.size()) return false;
+		
+		for(int i =0;i<sumList.size(); i++){
+			WrappedSummary sum1 = this.summaryList.get(i);
+			WrappedSummary sum2 = sumList.get(i);
+			if(sum1 == null && sum2 == null) continue;
+			if(sum1 != null){
+				if(!sum1.equals(sum2)) return false;
 			}
-			return true;
 		}
+		return true;
 	}
 
 	
 	@Override
 	public String toString(){
-		return (event == null? "null" : event.toString());// +" with "+(majorBranch < 0? "null" : summaryList.get(majorBranch));
+		return (event == null? "null" : event.toString())+" #"+index;// +" with "+(majorBranch < 0? "null" : summaryList.get(majorBranch));
 	}
 	
 	@Override
@@ -166,6 +166,19 @@ public class EventSummaryPair extends DefaultEdge{
 		}
 		return combinedCons;
 	}	
+	
+	public String getIdentityString(){
+		StringBuilder sb = new StringBuilder();
+		sb.append(this.event.toString()).append("_");
+		sb.append(this.event.getSource().toString()).append("_");
+		List<Expression> con = this.getCombinedConstraint();
+		if(con != null){
+			for(Expression expre : con){
+				sb.append(expre.toYicesStatement());
+			}
+		}
+		return this.event.toString()+"_"+this.event.getSource().toString()+"_";
+	}
 	
 	public void setConcreateExecuted(){
 		this.isExecuted = true;
@@ -236,6 +249,8 @@ public class EventSummaryPair extends DefaultEdge{
 			sb.append("\t").append(expre.toYicesStatement()).append("\n");
 		}
 		
+		sb.append("String identity:\n");
+		sb.append(this.getIdentityString()+"\n");
 		return sb.toString();
 	}
 	public int getIndex(){

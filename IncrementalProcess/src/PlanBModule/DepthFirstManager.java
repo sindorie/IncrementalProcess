@@ -4,6 +4,7 @@ import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -64,6 +65,7 @@ public class DepthFirstManager extends AbstractManager{
 	private boolean enableGUI = true;
 	private DefaultTableModel newEventModel, executedEventModel;
 	private Map<String, JTextArea> targetTextAreas = new HashMap<String, JTextArea>();
+	private Map<String, JTextArea> classCatergoryPane = new HashMap<String, JTextArea>();
 	private JTextArea targetArea, validArea;
 	
 	
@@ -173,14 +175,14 @@ public class DepthFirstManager extends AbstractManager{
 			confirmedList = new ArrayList<EventSummaryPair>(){
 				@Override
 				public boolean add(EventSummaryPair esPair){
-					confirmArea.append(esPair.toString());
+					confirmArea.append(esPair.toString()+"\n");
 					return super.add(esPair);
 				}
 			};
 			ignoredList = new ArrayList<EventSummaryPair>(){
 				@Override
 				public boolean add(EventSummaryPair esPair){
-					ignoreArea.append(esPair.toString());
+					ignoreArea.append(esPair.toString()+"\n");
 					return super.add(esPair);
 				}
 			};
@@ -221,7 +223,7 @@ public class DepthFirstManager extends AbstractManager{
 			
 			
 			JTabbedPane lineHitPane = new JTabbedPane();
-			Map<String, JTextArea> classCatergoryPane = new HashMap<String, JTextArea>();
+			classCatergoryPane = new HashMap<String, JTextArea>();
 			lineHit = new HashSet<String>(){
 				@Override
 				public boolean add(String line){
@@ -341,27 +343,40 @@ public class DepthFirstManager extends AbstractManager{
 		int valCount = 0;
 		if(toValidateList != null && !toValidateList.isEmpty()){
 			for(EventSummaryPair esPair : toValidateList){
-				if(checkEventConstraintExistence(esPair)){
-					//such event constraint pair exist
-					Logger.trace("Ignored: "+esPair);
-				}else{
-					//it is new
-					if(this.targets != null && esPair.getSummaryList() != null){
-						for(WrappedSummary sum : esPair.getSummaryList()){
-							for(String line : this.targets){
-								if(sum.executionLog.contains(line)){
-									esPair.targetLines.add(line);
-								}
+//				if(checkEventConstraintExistence(esPair)){
+//					//such event constraint pair exist
+//					Logger.trace("Ignored: "+esPair);
+//				}else{
+//					//it is new
+//					if(this.targets != null && esPair.getSummaryList() != null){
+//						for(WrappedSummary sum : esPair.getSummaryList()){
+//							for(String line : this.targets){
+//								if(sum.executionLog.contains(line)){
+//									esPair.targetLines.add(line);
+//								}
+//							}
+//						}
+//					}
+//					if(esPair.targetLines.size() > 0){ this.targetQueue.add(esPair);
+//					}else{ validationQueue.add(esPair); }
+//					valCount += 1;
+//				}
+				
+				if(this.targets != null && esPair.getSummaryList() != null){
+					for(WrappedSummary sum : esPair.getSummaryList()){
+						for(String line : this.targets){
+							if(sum.executionLog.contains(line)){
+								esPair.targetLines.add(line);
 							}
 						}
 					}
-					if(esPair.targetLines.size() > 0){ this.targetQueue.add(esPair);
-					}else{ validationQueue.add(esPair); }
-					valCount += 1;
 				}
+				Logger.trace("Validation: "+toValidateList.toString());
+				if(esPair.targetLines.size() > 0){ this.targetQueue.add(esPair);
+				}else{ validationQueue.add(esPair); }
+				valCount += 1;
 			}
 		}
-		Logger.trace("Added validation count: "+valCount);
 
 		//An event summary is ignored due to the incompleteness of summary list
 		//the current esPair is null iff it was an exploration operation
@@ -413,6 +428,21 @@ public class DepthFirstManager extends AbstractManager{
 				System.out.println(sequences);
 			}	
 		}
+		
+		if(this.enableGUI){
+			Iterator<Entry<String,JTextArea>> iter = classCatergoryPane.entrySet().iterator();
+			while(iter.hasNext()){
+				Entry<String,JTextArea> entry = iter.next();
+				JTextArea area = entry.getValue();
+				if(area != null){
+					String[] lines = area.getText().split("\n");
+					if(lines!=null && lines.length > 0){
+						Arrays.sort(lines);
+						area.setText(String.join("\n", lines));
+					}
+				}
+			}
+		}
 	}
 
 	/**Miscellaneous helper**/
@@ -431,7 +461,7 @@ public class DepthFirstManager extends AbstractManager{
 					(targetQueue == null) ||
 					(this.targetQueue.isEmpty()) ||
 					(this.targetQueue.peek().getTryCount() > maxIndividualValidationTry);
-			result = valLimit && targetLimit;
+			result = result && targetLimit;
 		}
 		return result;
 	}
@@ -554,20 +584,20 @@ public class DepthFirstManager extends AbstractManager{
 	 * @param esPair
 	 * @return true if exist
 	 */
-	private boolean checkEventConstraintExistence(EventSummaryPair esPair){
-		Event event = esPair.getEvent();
-		String key = event.toString()+event.getSource();
-		Set<Set<String>> constraintSet = ecExistence.get(key);
-		if(constraintSet == null){//first encounter
-			constraintSet = new HashSet<Set<String>>();
-			ecExistence.put(key, constraintSet);
-		}
-		List<Expression> constraints = esPair.getCombinedConstraint();
-		Set<String> organizedConstraint = new HashSet<String>();
-		for(Expression expre : constraints){
-			String expString = expre.toYicesStatement();
-			organizedConstraint.add(expString);
-		}
-		return !constraintSet.add(organizedConstraint);
-	}
+//	private boolean checkEventConstraintExistence(EventSummaryPair esPair){
+//		Event event = esPair.getEvent();
+//		String key = event.toString()+event.getSource();
+//		Set<Set<String>> constraintSet = ecExistence.get(key);
+//		if(constraintSet == null){//first encounter
+//			constraintSet = new HashSet<Set<String>>();
+//			ecExistence.put(key, constraintSet);
+//		}
+//		List<Expression> constraints = esPair.getCombinedConstraint();
+//		Set<String> organizedConstraint = new HashSet<String>();
+//		for(Expression expre : constraints){
+//			String expString = expre.toYicesStatement();
+//			organizedConstraint.add(expString);
+//		}
+//		return !constraintSet.add(organizedConstraint);
+//	}
 }
