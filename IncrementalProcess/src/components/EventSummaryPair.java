@@ -149,6 +149,15 @@ public class EventSummaryPair extends DefaultEdge{
 		return combinedSym;
 	}
 	
+	public boolean containLine(String line){
+		if(this.getSummaryList() == null) return false;
+		for(WrappedSummary sum : this.getSummaryList()){
+			if(sum ==null || sum.executionLog == null) continue;
+			if(sum.executionLog.contains(line)) return true;
+		}
+		return false;
+	}
+	
 	public List<Expression> getCombinedConstraint(){
 		if(combinedCons == null){
 			List<Expression> result = new ArrayList<Expression>();

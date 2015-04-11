@@ -66,6 +66,15 @@ public class ExuectionLoop implements Runnable{
 		
 		operation.onFinish();
 		manager.onFinish();
+		long milliseconds = System.currentTimeMillis() - this.startTime;
+		int seconds = (int) (milliseconds / 1000) % 60 ;
+		int minutes = (int) ((milliseconds / (1000*60)) % 60);
+		int hours   = (int) ((milliseconds / (1000*60*60)) % 24);
+		System.out.println( "Total Time: "+
+				((hours==0)?"":(hours+" h, ")) + 
+				((minutes==0)?"":(minutes+" m, ")) +
+				seconds + " s"
+				);
 	}
 
 	public AbstractManager getManager() { return manager; }

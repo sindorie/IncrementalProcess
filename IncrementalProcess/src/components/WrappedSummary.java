@@ -141,7 +141,7 @@ public class WrappedSummary {
 		
 		sb.append("Execution Log:\n");
 		sb.append("\t");
-		sb.append(executionLog.toString()).append("\n");
+		sb.append(String.join("\n", this.executionLog));
 		
 		sb.append("IsExecuted: ").append(isExecuted).append("\n");
 		return sb.toString();

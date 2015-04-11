@@ -58,6 +58,7 @@ public class DepthFirstManager extends AbstractManager{
 	private int totalConcreateExecution = 0, newConcreteExecution = 0, executionCount = 0;
 	private int maxIndividualValidationTry = 5;
 	private int iterationCount = 0;
+	private Decision previousDecision;
 	
 	/*
 	 * GUI field
@@ -303,12 +304,12 @@ public class DepthFirstManager extends AbstractManager{
 						validationQueue.peek().getTryCount() > maxIndividualValidationTry)
 					);
 			
-			return Decision.END;
+			return previousDecision=Decision.END;
 		}
-		if(!this.newEventStack.isEmpty()){ 	  return Decision.EXPLORE;
-		}else if(decideReachTarget()){ 		  return Decision.REACHTARGET;
-		}else if(!validationQueue.isEmpty()){ return Decision.EXPAND;
-		}else{ return Decision.END; }
+		if(!this.newEventStack.isEmpty()){ 	  return previousDecision=Decision.EXPLORE;
+		}else if(decideReachTarget()){ 		  return previousDecision=Decision.REACHTARGET;
+		}else if(!validationQueue.isEmpty()){ return previousDecision=Decision.EXPAND;
+		}else{ return previousDecision=Decision.END; }
 	}
 	
 	/**Exploration Mode**/
@@ -378,9 +379,9 @@ public class DepthFirstManager extends AbstractManager{
 			}
 		}
 
-		//An event summary is ignored due to the incompleteness of summary list
+		//An event summary might be ignored due to the incompleteness of summary list
 		//the current esPair is null iff it was an exploration operation
-		if(this.currentESPair != null && !this.currentESPair.isIgnored()){
+		if(this.currentESPair != null){
 			if(this.currentESPair.isIgnored()){
 				//do not queue it back
 				this.ignoredList.add(currentESPair);
@@ -401,17 +402,52 @@ public class DepthFirstManager extends AbstractManager{
 			}
 		}
 		
-		Set<String> lastestLineHit = this.operater.getLatestLineHit();
-		if(lastestLineHit != null){
-			Iterator<String> lineIter = lastestLineHit.iterator();
-			while(lineIter.hasNext()){ this.lineHit.add(lineIter.next()); }
-		}
-		
-		//Check the actual event summary which occurred. 
 		EventSummaryPair actual = this.operater.getLastExecutedEvent();
-		//the actual esPair is null if reposition failure during exploration or 
-		//solve for event failure.
-		if(actual != null){ checkTargetReachablility(actual); }
+		if(actual != null){
+			if(!actual.isConcreateExecuted()) throw new AssertionError();
+			if(isTargetSet()){
+				List<String> targetHits = new ArrayList<String>();
+				Set<String> lastestLineHit = this.operater.getLatestLineHit();
+				if(lastestLineHit != null){
+					Iterator<String> lineIter = lastestLineHit.iterator();
+					while(lineIter.hasNext()){
+						String line = lineIter.next();
+						this.lineHit.add(line); 
+						for(String target : this.targets){
+							if(target.equals(line)){targetHits.add(line);break;}
+						}
+					}
+				}
+				
+				// integrity checking. A BP hit should also be noticed in es pair
+				String decisionPrefix = "";
+				if(this.previousDecision == Decision.EXPLORE){
+					decisionPrefix = "[Explore] ";
+				}else if(this.previousDecision == Decision.REACHTARGET){
+					decisionPrefix = "[Reach T] ";
+				}else if(this.previousDecision == Decision.EXPAND){
+					decisionPrefix = "[Expand ] ";
+				}
+				
+				String esString = actual.toString();
+				
+				for(String hit : targetHits){
+					List<Event> sequence = this.operater.getLatestSequence();
+					if(actual.containLine(hit)){ 
+						onTargetLineReached(hit, sequence,decisionPrefix + esString + " [As Expected]    ");
+					}else{
+						onTargetLineReached(hit, sequence,decisionPrefix + esString + " [ES Log missing] ");
+					}
+				}
+			}
+			
+			if(actual.getTryCount() == 1){ // newly executed event summary pair
+				newConcreteExecution+=1;
+			}
+		}
+//		//the actual esPair is null if reposition failure during exploration or 
+//		//solve for event failure.
+//		if(actual != null){ checkTargetReachablility(actual); }
 		iterationCount+= 1;
 	}
 	
@@ -470,29 +506,28 @@ public class DepthFirstManager extends AbstractManager{
 	 * Check the execution log in the executed summary if any target line is hit
 	 * @param executed
 	 */
-	private boolean checkTargetReachablility(EventSummaryPair executed){
-		if(isTargetSet() == false) return false;
-		if(!executed.isConcreateExecuted()) throw new AssertionError();
-		
-		if(executed.getTryCount() == 1){ // newly executed event summary pair
-			newConcreteExecution+=1;
-			List<WrappedSummary> sumList = executed.getSummaryList();
-			if(sumList == null || sumList.isEmpty()) return false;
-			List<Event> sequence = this.operater.getLatestSequence();
-			if(sequence == null) throw new AssertionError();
-			for(WrappedSummary sum : sumList){
-				if(sum == null || sum.executionLog == null) continue;
-				for(String targetLine : targets){//check any target line is hit
-					if(sum.executionLog.contains(targetLine)){
-						onTargetLineReached(targetLine, sequence);
-					}
-				}
-			}
-		}else{ //executed more than one times
-			//don't care
-		}
-		return false;
-	}
+//	private boolean checkTargetReachablility(EventSummaryPair executed){
+//		if(isTargetSet() == false) return false;
+//		if(!executed.isConcreateExecuted()) throw new AssertionError();
+//		if(executed.getTryCount() == 1){ // newly executed event summary pair
+//			newConcreteExecution+=1;
+//			List<WrappedSummary> sumList = executed.getSummaryList();
+//			if(sumList == null || sumList.isEmpty()) return false;
+//			List<Event> sequence = this.operater.getLatestSequence();
+//			if(sequence == null) throw new AssertionError();
+//			for(WrappedSummary sum : sumList){
+//				if(sum == null || sum.executionLog == null) continue;
+//				for(String targetLine : targets){//check any target line is hit
+//					if(sum.executionLog.contains(targetLine)){
+//						onTargetLineReached(targetLine, sequence);
+//					}
+//				}
+//			}
+//		}else{ //executed more than one times
+//			//don't care
+//		}
+//		return false;
+//	}
 
 	private boolean isTargetSet(){
 		return this.targets != null && targets.length > 0;
@@ -514,14 +549,14 @@ public class DepthFirstManager extends AbstractManager{
 		return false;
 	}
 	
-	private void onTargetLineReached(String line, List<Event> sequence){
+	private void onTargetLineReached(String line, List<Event> sequence, String prefix){
 		boolean wasReached = this.reachedTargets.get(line);
 		if(!wasReached){
 			reachedTargets.put(line, true);
 			transferBetweenQueue();
 
 			JTextArea area = targetTextAreas.get(line);
-			area.append(sequence.toString());
+			area.append(prefix+sequence.toString());
 		}
 	}
 	
@@ -578,7 +613,7 @@ public class DepthFirstManager extends AbstractManager{
 		}
 	}
 	
-	private Map<String, Set<Set<String>>> ecExistence = new HashMap<String,Set<Set<String>>>();
+//	private Map<String, Set<Set<String>>> ecExistence = new HashMap<String,Set<Set<String>>>();
 	/**
 	 * Check the existence of event-constraint pair
 	 * @param esPair
