@@ -469,6 +469,19 @@ public class DepthFirstManager extends AbstractManager{
 			}
 		}
 	}
+	
+	public Map<String, String> getTargetReachDetail(){
+		Map<String,String> map = new HashMap<String,String>();
+		for(Entry<String,Boolean> entry : this.reachedTargets.entrySet()){
+			String line = entry.getKey();
+			boolean reached = entry.getValue();
+			if(reached){
+				JTextArea area = targetTextAreas.get(line);
+				map.put(line, area.getText());
+			}	
+		}
+		return map;
+	}
 
 	@Override
 	public Object getDumpData() {
@@ -573,15 +586,11 @@ public class DepthFirstManager extends AbstractManager{
 		return false;
 	}
 	
-	private void onTargetLineReached(String line, List<Event> sequence, String prefix){
-		boolean wasReached = this.reachedTargets.get(line);
-		if(!wasReached){
-			reachedTargets.put(line, true);
-			transferBetweenQueue();
-
-			JTextArea area = targetTextAreas.get(line);
-			area.append(prefix+sequence.toString());
-		}
+	private void onTargetLineReached(String line, List<Event> sequence, String prefix){		
+		reachedTargets.put(line, true);
+		transferBetweenQueue();
+		JTextArea area = targetTextAreas.get(line);
+		area.append(prefix+sequence.toString()+"\n");
 	}
 	
 	private boolean isAllReached(){

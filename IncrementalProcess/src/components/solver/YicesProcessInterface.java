@@ -1,11 +1,13 @@
 package components.solver;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.util.Arrays;
 
 import components.system.Configuration;
-
 import support.Logger;
 
 public class YicesProcessInterface implements ProblemSolver {
@@ -13,7 +15,7 @@ public class YicesProcessInterface implements ProblemSolver {
 	private Process yicesProcess;
 	private InputStream readChannel, errorChannel;
 	private OutputStream writeChannel;
-	private long maxtime = 1000*5; // 5s
+	private int maxtime = 1000*5; // 5s
 	private String path;
 	private boolean newProcess = true;
 	
@@ -65,31 +67,49 @@ public class YicesProcessInterface implements ProblemSolver {
 			
 			while (true) {
 				try { Thread.sleep(100); } catch (InterruptedException e) { }
-				
 				long current = System.currentTimeMillis();
 				count = readChannel.available();
 				if (count > 0) {
 					byte[] buf = new byte[count];
 					readChannel.read(buf);
 					String msg = new String(buf).trim();
-					if (msg.equalsIgnoreCase("sat")) {
+					msg = msg.toLowerCase();
+					if(msg.contains("undefined")){
+						result = false;
+						break;
+					}else if(msg.contains("unsat")){
+						result = false;
+						break;
+					}else if(msg.contains("sat")){
 						result = true;
 						break;
-					} else if (msg.equalsIgnoreCase("unsat")) {
-						result = false;
-						break;
-					} else {
-						System.out.println("unidentified: " + msg);
-						result = false;
-						break;
+					}else{
+						Logger.debug("Unkonwn: "+msg);
 					}
+					
+//					String[] chunks = msg.split("\n");
+//					for(String line : chunks){
+//						if(line == null) continue;
+//						String trimed = line.trim();
+//						if (trimed.equalsIgnoreCase("sat")) {
+//							
+//						} else if (trimed.equalsIgnoreCase("unsat")) {
+//							
+//						} else if(trimed.startsWith("stdin: undefined")){
+//							result = false;
+//							break;
+//						} 
+////						else {
+////							System.out.println("unidentified: " + line);
+////							result = false;
+////							break;
+////						}
+//					}
 				}
-
 				if (current >= end) {
 					timeout = true;
 					break;
 				}
-				
 			}
 
 			if (timeout) {
@@ -107,7 +127,10 @@ public class YicesProcessInterface implements ProblemSolver {
 				byte[] buf = new byte[errorCount];
 				errorChannel.read(buf);
 				String er = new String(buf).trim();
-				Logger.debug(er);
+//				if(er != null){
+////					er = er.replace("", newChar)
+//				}
+//				Logger.debug(er);
 			}
 			Logger.debug("Sat: "+result);
 			if(newProcess) terminateProcess();
@@ -130,5 +153,44 @@ public class YicesProcessInterface implements ProblemSolver {
 		readChannel = yicesProcess.getInputStream();
 		errorChannel = yicesProcess.getErrorStream();
 		writeChannel = yicesProcess.getOutputStream();
+	}
+	
+	
+	private String readLine(InputStream in, int maxTime) throws IOException{
+		StringBuilder sb = new StringBuilder();
+		byte[] buf = new byte[256];
+		int index = 0;
+		
+		long startTime = System.currentTimeMillis();
+		while(true){
+			if(in.available() > 0){
+				int read = in.read();
+				if(read < 0){
+					break;
+				}else if(read == '\n'){
+					index += 1;
+					break;
+				}else{
+					buf[index] = (byte) read;
+					index += 1;
+					if(index == 256){
+						sb.append(new String(buf).trim());
+						index = 0;
+						buf = new byte[256];
+					}
+				}
+			}else{
+				try { Thread.sleep(10);
+				} catch (InterruptedException e) { }
+				long currentTime = System.currentTimeMillis();
+				if(currentTime - startTime > maxTime){ 
+					break; 
+				}
+			}
+		}
+		if(index > 0){
+			sb.append(new String(Arrays.copyOf(buf, index)));
+		}
+		return sb.toString();
 	}
 }
