@@ -14,7 +14,10 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Scanner;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
@@ -22,15 +25,17 @@ import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.table.DefaultTableModel;
 
+import components.EventSummaryPair;
 import components.system.Configuration;
-
 import PlanBModule.AbstractManager.Decision;
+import PlanBModule.DepthFirstManager.CallBack;
 import analysis.StaticInfo;
 import staticFamily.StaticApp;
 import support.CommandLine;
 import support.Logger;
 import support.Logger.CurrentThreadInfo;
 import support.Logger.InformationFilter;
+import tools.CoverageStats;
 
 public class EntryPoint {
 
@@ -38,12 +43,13 @@ public class EntryPoint {
 		
 		String prefix = "/home/zhenxu/workspace/APK/";
 		String path = 
-				"Dragon_interface2.apk";
+//				"Dragon_interface2.apk";
 //				"Dragon_interface.apk";
 //				"Dragon-v1.apk";	
 //				"Dragon.apk";	
 //				"TestProcedure.apk";
 //				"Beta1.apk";
+				"info.bpace.munchlife.apk";
 //				"CalcA.apk";
 //		"backupHelper.apk";
 //		"net.mandaria.tippytipper.apk";
@@ -54,8 +60,12 @@ public class EntryPoint {
 //		boolean force = false;
 		
 		String[] targets = {
+				/*CalcA.apk*/
+				
+				
+				
 				/*Dragon_interface2.apk*/
-				"com.example.dragon.MainActivity:51",
+//				"com.example.dragon.MainActivity:51",
 				
 				/*Dragon_interface.apk*/
 //				"com.example.dragon.MainActivity:37",
@@ -81,8 +91,6 @@ public class EntryPoint {
 		};
 
 		
-		
-		
 		String[] serials = getDeviceId();
 		if(serials == null){ System.out.println("Need two serial devices"); return;
 		}else{ System.out.println("Serial: "+Arrays.toString(serials)); }
@@ -93,41 +101,78 @@ public class EntryPoint {
 		DualDeviceOperation operater = new DualDeviceOperation(app, model, serials[0], serials[1]);
 		DepthFirstManager manager = new DepthFirstManager(app, model);
 		manager.setTargets(targets);
+		manager.setMaxIndividualValidationTry(3);
+		
+		
+		manager.setCallBack(new CallBack(){
+			@Override
+			public void checkExecutionLog(Set<String> log) { // dont modify the data
+				// TODO Auto-generated method stub
+			}
+		});
+		
 		
 		final ExuectionLoop loop = new ExuectionLoop(manager, operater, model);
-		
-		loop.setMaxIteration(100);
-		
-//		loop.setCheckCallBack(new ExuectionLoop.CheckCallBack() {
-//			boolean cycleBreak = false;
-//			@Override
-//			public void onOperationFinish(ExuectionLoop loop) {
-//				if(cycleBreak){
-//					String line = CommandLine.requestInput();
-//					if(line.equals("1")){
-//						cycleBreak = !cycleBreak;
-//					}else if(line.equals("9")){
-//						
-//					}
-//				}else if(CommandLine.hasNextLine()){
-//					String line = CommandLine.requestInput();
-//					if(line.equals("1")){
-//						cycleBreak = !cycleBreak;
-//					}else if(line.equals("9")){
-//						
-//					}
-//				}
-//			}
-//			@Override
-//			public boolean onIterationStart(ExuectionLoop loop) {
-//				return false;
-//			}
-//			
-//			@Override
-//			public void onDecisionMade(ExuectionLoop loop, Decision nextOperation) {}
-//		});
-		
+		loop.setMaxDuration(TimeUnit.MINUTES.toMillis(20));
+		loop.setMaxIteration(200);
 		loop.run();
+		
+		 
+		Set<String> hits = manager.getAllHitList();
+		CoverageStats statistic = new CoverageStats();
+		Map<String, Set<String>> clsLineMis = statistic.getMissingLines(hits, app);
+		Map<String, List<EventSummaryPair>> esData = operater.getESDeposit().data;
+		
+		
+		System.out.println("Line coverage");
+		int hitTotalSize = hits.size();
+		System.out.println("Hit size: "+hitTotalSize);
+		int totalMiseed = 0;
+		for(Entry<String,Set<String>>  missed : clsLineMis.entrySet()){
+			totalMiseed += missed.getValue().size();
+			System.out.println(missed.getKey()+" missed line amount: "+missed.getValue().size());
+		}
+		System.out.println("Missed line amount: "+totalMiseed);
+		System.out.println("Cumulative line coverage: "+hitTotalSize+"/"+(totalMiseed+hitTotalSize)+"(hit/total)");
+		
+		System.out.println("Path coverage");
+		int totalES = 0;
+		int concrete = 0;
+		for(Entry<String, List<EventSummaryPair>> entry : esData.entrySet()){
+			int localTotal = entry.getValue().size();
+			int localConcrete = 0;
+			for(EventSummaryPair esPair :entry.getValue()){
+				if(esPair.isConcreateExecuted()) localConcrete+=1;
+			}
+			concrete += localConcrete;
+			totalES += localTotal;
+			System.out.println(entry.getKey()+" : "+localConcrete+"/"+localTotal);
+		}
+		System.out.println("Cumulative: "+ concrete+"/"+totalES);
+		
+//		manager.getDumpData();
+//		operater.getDumpData();
+//		try {
+//			FileOutputStream fout = new FileOutputStream("generated/statistic.dump");
+//			ObjectOutputStream oos = new ObjectOutputStream(fout);
+//			List<Object> list = new ArrayList<Object>();
+//			list.add(hits);
+//			list.add(esData);
+//			list.add(clsLineMis);
+//			oos.writeObject(list);
+//			
+//			oos.flush();
+//			oos.close();
+//			fout.close();
+//		} catch (FileNotFoundException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		} catch (IOException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		} catch(Exception e){
+//			e.printStackTrace();
+//		}
 	}
 	
 	

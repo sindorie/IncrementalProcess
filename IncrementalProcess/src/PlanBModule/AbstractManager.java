@@ -1,6 +1,7 @@
 package PlanBModule;
 
 import java.util.List;
+import java.util.Set;
 
 import staticFamily.StaticApp;
 import components.Event;
@@ -92,6 +93,12 @@ public abstract class AbstractManager {
 	 */
 	public abstract void onIterationStepEnd();
 
+	
+	public abstract Object getDumpData();
+	
+	public abstract void restore(Object dumped);
+	
+	public abstract Set<String> getAllHitList();
 	
 	public void setOperater(AbstractOperation operater){
 		this.operater = operater;

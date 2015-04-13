@@ -39,16 +39,16 @@ public class AnchorSolver {
 	}
 	
 	private UIModel model;
-	public AnchorSolver(UIModel model){
+	private final int maxDepth, maxBandwith;
+	public AnchorSolver(UIModel model,int maxDepth, int maxBandWith){
 		this.model = model;
+		this.maxBandwith = maxBandWith;
+		this.maxDepth = maxDepth;
 	}
 	
 	DefaultMutableTreeNode root;
 	List<DefaultMutableTreeNode> leaves;
 	List<List<Event>> sequenceList = new ArrayList<List<Event>>();
-	
-	int maxDepth = 10;
-	int maxBandwith = 10;
 	
 	/**
 	 * First create a sequence of events which 

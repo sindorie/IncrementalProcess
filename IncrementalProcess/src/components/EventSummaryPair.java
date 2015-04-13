@@ -1,5 +1,6 @@
 package components;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -11,7 +12,7 @@ import org.jgrapht.graph.DefaultEdge;
 import symbolic.Expression;
  
 
-public class EventSummaryPair extends DefaultEdge{ 
+public class EventSummaryPair extends DefaultEdge implements Serializable{ 
 	private static int gIndex = 0;
 	private int index = gIndex++;
 	

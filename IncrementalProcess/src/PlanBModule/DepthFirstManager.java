@@ -44,6 +44,7 @@ public class DepthFirstManager extends AbstractManager{
 	private Stack<Event> newEventStack;
 	private PriorityQueue<EventSummaryPair> validationQueue, targetQueue;
 	private List<EventSummaryPair> ignoredList, confirmedList;
+	private CallBack callBack;
 	
 	/*
 	 * Target related field
@@ -372,7 +373,7 @@ public class DepthFirstManager extends AbstractManager{
 						}
 					}
 				}
-				Logger.trace("Validation: "+toValidateList.toString());
+//				Logger.trace("Validation: "+toValidateList.toString());
 				if(esPair.targetLines.size() > 0){ this.targetQueue.add(esPair);
 				}else{ validationQueue.add(esPair); }
 				valCount += 1;
@@ -402,12 +403,13 @@ public class DepthFirstManager extends AbstractManager{
 			}
 		}
 		
+		Set<String> lastestLineHit = this.operater.getLatestLineHit();
+		if(callBack != null && lastestLineHit != null) callBack.checkExecutionLog(lastestLineHit);
 		EventSummaryPair actual = this.operater.getLastExecutedEvent();
 		if(actual != null){
 			if(!actual.isConcreateExecuted()) throw new AssertionError();
 			if(isTargetSet()){
 				List<String> targetHits = new ArrayList<String>();
-				Set<String> lastestLineHit = this.operater.getLatestLineHit();
 				if(lastestLineHit != null){
 					Iterator<String> lineIter = lastestLineHit.iterator();
 					while(lineIter.hasNext()){
@@ -430,13 +432,21 @@ public class DepthFirstManager extends AbstractManager{
 				}
 				
 				String esString = actual.toString();
-				
 				for(String hit : targetHits){
 					List<Event> sequence = this.operater.getLatestSequence();
 					if(actual.containLine(hit)){ 
 						onTargetLineReached(hit, sequence,decisionPrefix + esString + " [As Expected]    ");
 					}else{
 						onTargetLineReached(hit, sequence,decisionPrefix + esString + " [ES Log missing] ");
+					}
+				}
+			}else{
+				List<String> targetHits = new ArrayList<String>();
+				if(lastestLineHit != null){
+					Iterator<String> lineIter = lastestLineHit.iterator();
+					while(lineIter.hasNext()){
+						String line = lineIter.next();
+						this.lineHit.add(line); 
 					}
 				}
 			}
@@ -481,6 +491,68 @@ public class DepthFirstManager extends AbstractManager{
 		}
 	}
 
+	@Override
+	public Object getDumpData() {
+		List<Object> list = new ArrayList<Object>();
+		list.add(newEventStack);
+		list.add(validationQueue);
+		list.add(targetQueue);
+		list.add(ignoredList);
+		list.add(confirmedList);
+		list.add(targets);
+		list.add(reachedTargets);
+		list.add(lineHit);
+		list.add(totalConcreateExecution);
+		list.add(executionCount);
+		
+		list.add(newEventModel);
+		list.add(executedEventModel);
+		list.add(targetTextAreas);
+		list.add(classCatergoryPane);
+		list.add(targetArea);
+		list.add(validArea);
+		
+		return list.toArray(new Object[0]);
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public void restore(Object dumped) {
+		Object[] list = (Object[]) dumped;
+		int index = 0;
+		newEventStack = (Stack<Event>) list[index]; index++;
+		validationQueue = (PriorityQueue<EventSummaryPair>) list[index]; index++;
+		targetQueue = (PriorityQueue<EventSummaryPair>) list[index]; index++;
+		ignoredList = (List<EventSummaryPair>) list[index]; index++;
+		confirmedList = (List<EventSummaryPair>) list[index]; index++;
+		targets = (String[]) list[index]; index++;
+		reachedTargets = (Map<String, Boolean>) list[index]; index++;
+		lineHit = (Set<String>) list[index]; index++;
+		totalConcreateExecution = (Integer)list[index]; index++;
+		executionCount = (Integer)list[index]; index++;
+		
+		/*GUI related*/
+		newEventModel = (DefaultTableModel) list[index]; index++;
+		executedEventModel = (DefaultTableModel) list[index]; index++;
+		targetTextAreas = (Map<String, JTextArea>) list[index]; index++;
+		classCatergoryPane = (Map<String, JTextArea>) list[index]; index++;
+		targetArea = (JTextArea) list[index]; index++;
+		validArea = (JTextArea) list[index]; index++;
+	}
+	
+	
+	@Override
+	public Set<String> getAllHitList() {
+		return this.lineHit;
+	}
+	
+	public void setMaxIndividualValidationTry(int max){
+		this.maxIndividualValidationTry = max;
+	}
+	
+	public void setCallBack(CallBack callBack){
+		this.callBack = callBack;
+	}
 	/**Miscellaneous helper**/
 	
 	private boolean isLimitReached(){
@@ -612,6 +684,24 @@ public class DepthFirstManager extends AbstractManager{
 			this.validArea.revalidate();
 		}
 	}
+
+
+	public interface CallBack{
+		/**
+		 * Called when there is break point reading
+		 * @param log -- a 2 dimension matrix where each String represent a execution log
+		 * 				and each List<String> represents an executionLog for a method root
+		 */
+		public void checkExecutionLog(Set<String> log);
+		
+//		/**
+//		 * Called when there is new event generated
+//		 * @param newEvents
+//		 */
+//		public void checkNewEvent(List<Event> newEvents);
+	}
+
+
 	
 //	private Map<String, Set<Set<String>>> ecExistence = new HashMap<String,Set<Set<String>>>();
 	/**

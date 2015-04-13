@@ -70,6 +70,9 @@ public abstract class AbstractOperation {
 	 */
 	public abstract List<Event> getLatestSequence();
 	
+	public abstract Object getDumpData();
+	
+	public abstract void restore(Object dumped);
 	
 	public abstract Set<String> getLatestLineHit();
 	

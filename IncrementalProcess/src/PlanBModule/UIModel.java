@@ -60,6 +60,7 @@ public class UIModel {
 	private List<EventSummaryPair> edgesReference = new ArrayList<EventSummaryPair>();
 	private Map<String, SequenceStatus> solvedSummaryRecord = new HashMap<String, SequenceStatus>();
 	private int LAYOUT_MAX_AMOUNT = 25;
+	private int maxDepth = 10, maxBandWith = 10;
 	
 	public UIModel() {
 		graph = new ListenableDirectedGraph<GraphicalLayout, EventSummaryPair>(EventSummaryPair.class);
@@ -182,14 +183,14 @@ public class UIModel {
 		String key = edge.getIdentityString();
 		SequenceStatus list = solvedSummaryRecord.get(key);
 		if(list == null){
-			AnchorSolver aSolver = new AnchorSolver(this);
+			AnchorSolver aSolver = new AnchorSolver(this,maxDepth,maxBandWith);
 			aSolver.solve(edge);
 			List<List<Event>> eSeq = aSolver.getResult();
 			if(eSeq == null){eSeq = new ArrayList<List<Event>>();}
 			list = new SequenceStatus(eSeq, this);
 			solvedSummaryRecord.put(key, list);
 		}else if(list.needUpdate(this)){
-			AnchorSolver aSolver = new AnchorSolver(this);
+			AnchorSolver aSolver = new AnchorSolver(this,maxDepth,maxBandWith);
 			aSolver.solve(edge);
 			List<List<Event>> eSeq = aSolver.getResult();
 			list.update(eSeq, this);
@@ -284,6 +285,11 @@ public class UIModel {
 		}
 		this.onNewLayoutHelper(layout);
 		return layout;
+	}
+	
+	public void setMaxSolveDimension(int maxDepth, int maxBandwith){
+		this.maxDepth = maxDepth;
+		this.maxBandWith = maxBandwith;
 	}
 	
 	@SuppressWarnings("unchecked")

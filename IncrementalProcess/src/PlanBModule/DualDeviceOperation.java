@@ -381,8 +381,32 @@ public class DualDeviceOperation extends AbstractOperation {
 		return result;
 	}
 	
+	@Override
+	public Object getDumpData() {
+		List<Object> list = new ArrayList<Object>();
+		list.add(eventDeposit);
+		list.add(eventSummaryDeposit);
+		list.add(methodSigToSummaries);
+		return list.toArray(new Object[0]);
+	}
+
+	@SuppressWarnings("unchecked")
+	@Override
+	public void restore(Object dumped) {
+		Object[] list = (Object[]) dumped;
+		eventDeposit = (EventDeposit) list[0];
+		eventSummaryDeposit = (EventSummaryDeposit) list[1];
+		methodSigToSummaries = (Map<String, List<WrappedSummary>>) list[2];
+	}
+	
+	public EventSummaryDeposit getESDeposit(){
+		return this.eventSummaryDeposit;
+	}
+	
+	/*Help method Section*/
+	
 	/**
-	 * Try to select the best candidate out of the summary candidates for a method
+	* Try to select the best candidate out of the summary candidates for a method
 	 * @param mappedSummaryCandidates -- a list of candidates for a list of method roots
 	 * @param methodRoots -- a list of method roots where each of them corresponds to some candidates 
 	 * @param sig -- the method signature (partial function name)
@@ -538,7 +562,6 @@ public class DualDeviceOperation extends AbstractOperation {
 		this.currentLayout = GraphicalLayout.Launcher;
 	}
 
-	
 	/**
 	 * Filter when 
 	 * 1. it is the same as given known esPair
@@ -568,7 +591,6 @@ public class DualDeviceOperation extends AbstractOperation {
 		}
 		return result;
 	}
-	
 	
 	/**
 	 * Execute the event on both devices. Read logcat and BP hits. 
@@ -747,6 +769,5 @@ public class DualDeviceOperation extends AbstractOperation {
 		List<String> executionLog;
 		GraphicalLayout resultedLayout;
 	}
-
 
 }

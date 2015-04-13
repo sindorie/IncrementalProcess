@@ -11,9 +11,8 @@ public class ExuectionLoop implements Runnable{
 	private AbstractOperation operation;
 	private CheckCallBack callBack;
 	private boolean working = true;
-	private int iterationCount;
-	private long startTime = -1;
-	private int maxCount = -1;
+	private int iterationCount = 0, maxCount = -1;
+	private long startTime = -1, maxTime = -1; 
 	
 	public ExuectionLoop(
 			AbstractManager manager, 
@@ -61,7 +60,11 @@ public class ExuectionLoop implements Runnable{
 			manager.onIterationStepEnd();
 			iterationCount += 1;
 			
-			if(maxCount > 0 && iterationCount > maxCount) break;
+			long currentTime = System.currentTimeMillis();
+			if( (maxCount > 0 && iterationCount > maxCount) || /*Iteration Limit*/
+				(maxTime > 0 && currentTime - startTime > maxTime) ){ /*Time Limit*/ 
+				break;
+			}
 		}
 		
 		operation.onFinish();
@@ -86,6 +89,7 @@ public class ExuectionLoop implements Runnable{
 	public int getIteerationCount(){ return this.iterationCount;}
 	public long getStartTime(){ return this.startTime; }
 	public void setMaxIteration(int max){ maxCount = max; }
+	public void setMaxDuration(long maxDuration){this.maxTime = maxDuration;}
 	
 	public interface CheckCallBack{
 		public boolean onIterationStart(ExuectionLoop loop);
