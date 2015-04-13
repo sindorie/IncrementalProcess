@@ -16,7 +16,7 @@ import symbolic.Variable;
 public class ExpressionTranfomator {
 	private static boolean shouldBeIgnored;
 	private static boolean valid;
-	public final static String tmpVairableMatcher = "[vp]\\d+$";
+	public final static String tmpVairableMatcher = "\\$?[vp]\\d+$";
 	public final static String FilterString = "[:\\;\\$\\-\\>\\/\\\\]";
 	
 	public final static String 

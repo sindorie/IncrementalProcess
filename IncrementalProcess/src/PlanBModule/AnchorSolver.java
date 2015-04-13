@@ -104,7 +104,8 @@ public class AnchorSolver {
 				for(Expression expre : content.cumulativeConstraints){
 					Logger.trace(expre.getChildCount()+"-> "+expre.toYicesStatement());
 					if(expre.getChildCount() == 1){
-						throw new AssertionError();
+//						throw new AssertionError();
+						Logger.debug("Unpected on child policy: "+expre.getChildCount()+"-> "+expre.toYicesStatement());
 					}
 				}
 				

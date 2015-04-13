@@ -13,7 +13,7 @@ public class YicesProcessInterface implements ProblemSolver {
 	private Process yicesProcess;
 	private InputStream readChannel, errorChannel;
 	private OutputStream writeChannel;
-	private long maxtime = 1000 * 20; // 20s
+	private long maxtime = 1000*5; // 5s
 	private String path;
 	private boolean newProcess = true;
 	

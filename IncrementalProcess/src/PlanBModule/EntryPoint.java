@@ -12,6 +12,7 @@ import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -25,6 +26,7 @@ import javax.swing.JTable;
 import javax.swing.JTextArea;
 import javax.swing.table.DefaultTableModel;
 
+import components.Event;
 import components.EventSummaryPair;
 import components.system.Configuration;
 import PlanBModule.AbstractManager.Decision;
@@ -41,61 +43,17 @@ public class EntryPoint {
 
 	public static void main(String[] args) {
 		
-		String prefix = "/home/zhenxu/workspace/APK/";
-		String path = 
-//				"Dragon_interface2.apk";
-//				"Dragon_interface.apk";
-//				"Dragon-v1.apk";	
-//				"Dragon.apk";	
-//				"TestProcedure.apk";
-//				"Beta1.apk";
-				"info.bpace.munchlife.apk";
-//				"CalcA.apk";
-//		"backupHelper.apk";
-//		"net.mandaria.tippytipper.apk";
-//			"TestField.apk";
-//		"Dragon_double.apk";
+		String prefix = "/home/zhenxu/AndroidTestAPKPlayGround/APK2/";
+		String path = "info.bpace.munchlife.apk";
+		String[] targets = { };
 		
-		boolean force = true;
-//		boolean force = false;
-		
-		String[] targets = {
-				/*CalcA.apk*/
-				
-				
-				
-				/*Dragon_interface2.apk*/
-//				"com.example.dragon.MainActivity:51",
-				
-				/*Dragon_interface.apk*/
-//				"com.example.dragon.MainActivity:37",
-				
-				/*Dragon.apk*/
-//				"com.example.dragon.SecondLayout:86",
-				
-				/*Dragon-v1.apk*/
-//				"com.example.dragon.MainActivity:119",
-//				"com.example.dragon.SecondLayout:72",
-//				"com.example.dragon.SecondLayout:84",
-//				"com.example.dragon.SecondLayout:79",
-//				"com.example.dragon.SecondLayout:90",
-				
-				/*net.mandaria.tippytipper.apk*/
-//				"net.mandaria.tippytipperlibrary.activities.Total:259",
-//				"net.mandaria.tippytipperlibrary.activities.Total:344",
-//				"net.mandaria.tippytipperlibrary.activities.Total:467",
-//				"net.mandaria.tippytipperlibrary.activities.Total:307",
-//				"net.mandaria.tippytipperlibrary.activities.Total:377",
-//				"net.mandaria.tippytipperlibrary.activities.TippyTipper:254",
-//				"net.mandaria.tippytipperlibrary.activities.TippyTipper:258",
-		};
-
-		
+		boolean force = true;  
 		String[] serials = getDeviceId();
 		if(serials == null){ System.out.println("Need two serial devices"); return;
 		}else{ System.out.println("Serial: "+Arrays.toString(serials)); }
-
-		setupLogger();
+//		Logger.ConsoleLogger.setEnableLocal(false);
+		setupLogger(); 
+		
 		StaticApp app = StaticInfo.initAnalysis(prefix+path, force);
 		UIModel model = new UIModel();
 		DualDeviceOperation operater = new DualDeviceOperation(app, model, serials[0], serials[1]);
@@ -103,16 +61,28 @@ public class EntryPoint {
 		manager.setTargets(targets);
 		manager.setMaxIndividualValidationTry(3);
 		
-		
-		manager.setCallBack(new CallBack(){
+		DepthFirstManager.CallBack cheker = new DepthFirstManager.CallBack(){
+			int totalNewEventCount = 0, validationCount = 0;
+			Set<String> totalLog = new HashSet<String>();
 			@Override
-			public void checkExecutionLog(Set<String> log) { // dont modify the data
-				// TODO Auto-generated method stub
+			public void check(List<Event> newEvents,
+					List<EventSummaryPair> list, 
+					Set<String> log,
+					EventSummaryPair executed) {
+				System.out.println("New events size: "+(newEvents == null?0:newEvents.size()));
+				System.out.println("New validation size: "+(list == null?0:list.size()));
+				
+				totalNewEventCount += (newEvents == null?0:newEvents.size());
+				validationCount += (list == null?0:list.size());
+				if(log != null) totalLog.addAll(log);
+				
+//				System.out.println("Waiting for input:");
+//				String line = CommandLine.requestInput();
 			}
-		});
+		};
+		manager.setCallBack(cheker);
 		
-		
-		final ExuectionLoop loop = new ExuectionLoop(manager, operater, model);
+		ExuectionLoop loop = new ExuectionLoop(manager, operater, model);
 		loop.setMaxDuration(TimeUnit.MINUTES.toMillis(20));
 		loop.setMaxIteration(200);
 		loop.run();
@@ -123,6 +93,7 @@ public class EntryPoint {
 		Map<String, Set<String>> clsLineMis = statistic.getMissingLines(hits, app);
 		Map<String, List<EventSummaryPair>> esData = operater.getESDeposit().data;
 		
+		/* Statistic */
 		
 		System.out.println("Line coverage");
 		int hitTotalSize = hits.size();
@@ -149,30 +120,6 @@ public class EntryPoint {
 			System.out.println(entry.getKey()+" : "+localConcrete+"/"+localTotal);
 		}
 		System.out.println("Cumulative: "+ concrete+"/"+totalES);
-		
-//		manager.getDumpData();
-//		operater.getDumpData();
-//		try {
-//			FileOutputStream fout = new FileOutputStream("generated/statistic.dump");
-//			ObjectOutputStream oos = new ObjectOutputStream(fout);
-//			List<Object> list = new ArrayList<Object>();
-//			list.add(hits);
-//			list.add(esData);
-//			list.add(clsLineMis);
-//			oos.writeObject(list);
-//			
-//			oos.flush();
-//			oos.close();
-//			fout.close();
-//		} catch (FileNotFoundException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		} catch (IOException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		} catch(Exception e){
-//			e.printStackTrace();
-//		}
 	}
 	
 	

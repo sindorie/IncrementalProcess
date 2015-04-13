@@ -73,7 +73,7 @@ public class DualDeviceOperation extends AbstractOperation {
 	 */
 	private Event closeKeyboardEvent; 						//predefined event
 	private LinesSummaryMatcher matcher;					//matcher between line numbers
-
+	private long closeKeyboardSleep = 1000;
 	
 	/**
 	 * @param app -- the application under investigation
@@ -165,8 +165,10 @@ public class DualDeviceOperation extends AbstractOperation {
 		List<List<WrappedSummary>> linarList = linearHelper(actualResult.mappedSummaryCandidatesList);
 //		premutatedList
 		List<EventSummaryPair> validationCandidate = filterConstructAndDesposit(linarList, newEvent, actualResult.methodRoots, actualResult.esPair);
-		Logger.trace("Size: "+(validationCandidate==null?0:validationCandidate.size()));
-		this.newValidationEvent = validationCandidate;
+		if(newEvent.getSource()!=GraphicalLayout.Launcher){
+			Logger.trace("Size: "+(validationCandidate==null?0:validationCandidate.size()));
+			this.newValidationEvent = validationCandidate;
+		}
 		// no need to check event deposit
 		this.lastExecutedEvent = actualResult.esPair;
 		this.lastExecutedEvent.setConcreateExecuted();
@@ -198,7 +200,10 @@ public class DualDeviceOperation extends AbstractOperation {
 			while(winOverview == null){
 				winOverview = collector_jdbDevice.getWindowOverview();
 			}//should eventually get the correct one
-			if (winOverview.isKeyboardVisible()) { closeKeyboard(); }
+			if (winOverview.isKeyboardVisible()) { 
+				try { Thread.sleep(closeKeyboardSleep); } catch (InterruptedException e) { }
+				closeKeyboardForBothDevices(); 
+			}
 		}
 		GraphicalLayout targetLayout = this.model.findSameOrAddLayout(winOverview.getFocusedWindow().actName, viewInfoJDB.loadWindowData());
 		if (targetLayout.equals(toValidate.getEvent().getSource()) == false) {
@@ -494,9 +499,12 @@ public class DualDeviceOperation extends AbstractOperation {
 					this.viewDeviceExecuter.applyEvent(esPair.getEvent(),false);
 					this.jdbDeviceExecuter.applyEvent(esPair.getEvent());
 					winOverview = this.collector_viewDevice.getWindowOverview();
+					
 					if (winOverview.isKeyboardVisible()) {
-						viewDeviceExecuter.applyEvent(this.closeKeyboardEvent);
+						try { Thread.sleep(closeKeyboardSleep); } catch (InterruptedException e) { }
+						closeKeyboardForBothDevices();
 					}
+					
 				}
 				GraphicalLayout layout = model.findSameOrAddLayout(
 						winOverview.getFocusedWindow().actName, 
@@ -523,11 +531,12 @@ public class DualDeviceOperation extends AbstractOperation {
 					this.viewDeviceExecuter.applyEvent(event,false);
 					this.jdbDeviceExecuter.applyEvent(event);
 					winOverview = this.collector_viewDevice.getWindowOverview();
+					
 					if (winOverview.isKeyboardVisible()) {
-						viewDeviceExecuter.applyEvent(this.closeKeyboardEvent);
+						try { Thread.sleep(closeKeyboardSleep); } catch (InterruptedException e) { }
+						this.closeKeyboardForBothDevices();
 					}
 				}
-				
 				GraphicalLayout layout = model.findSameOrAddLayout(
 						winOverview.getFocusedWindow().actName, 
 						this.viewInfoView.loadWindowData());
@@ -543,7 +552,7 @@ public class DualDeviceOperation extends AbstractOperation {
 	 * Close the keyboard by sending the closeing keyboard event
 	 * which now is press back event
 	 */
-	private void closeKeyboard() {
+	private void closeKeyboardForBothDevices() {
 		this.viewDeviceExecuter.applyEvent(closeKeyboardEvent, false);
 		this.jdbDeviceExecuter.applyEvent(closeKeyboardEvent);
 	}
@@ -576,6 +585,7 @@ public class DualDeviceOperation extends AbstractOperation {
 	 * @return
 	 */
 	private List<EventSummaryPair> filterConstructAndDesposit(List<List<WrappedSummary>> potentialCombination, Event event, List<String> methodRoots,  EventSummaryPair known){
+		this.eventSummaryDeposit.deposit(known);
 		List<EventSummaryPair> result = new ArrayList<EventSummaryPair>();
 		if(potentialCombination == null) return null;
 		for(List<WrappedSummary> wrappedList : potentialCombination){
@@ -651,7 +661,10 @@ public class DualDeviceOperation extends AbstractOperation {
 			resultedLayout = model.findSameOrAddLayout(focusedWin.actName, viewInfoView.loadWindowData());
 //					new GraphicalLayout(focusedWin.actName,
 //					viewInfoView.loadWindowData());
-			if (inputMethodVisible) { closeKeyboard(); }
+			if (inputMethodVisible) { 
+				try { Thread.sleep(closeKeyboardSleep); } catch (InterruptedException e) { }
+				this.viewDeviceExecuter.applyEvent(closeKeyboardEvent);
+			}
 		}break;
 		case WindowInformation.SCOPE_OUT: {
 			Logger.trace("window is outside the application");
@@ -668,14 +681,13 @@ public class DualDeviceOperation extends AbstractOperation {
 			 * most symbolic states.
 			 */
 			this.jdbDeviceExecuter.applyEvent(event);
-			if (inputMethodVisible) { jdbDeviceExecuter.applyEvent(closeKeyboardEvent); }
+//			if (inputMethodVisible) { jdbDeviceExecuter.applyEvent(closeKeyboardEvent); }
 			
 			List<WrappedSummary> mappedSummaryList = new ArrayList<WrappedSummary>();
 			for(String method : methodRoots){
 				WrappedSummary mapped = findBestCandidate(mappedSummaryCandidatesList, methodRoots, method);
 				mappedSummaryList.add(mapped);
 			}
-			
 			actualPair = new EventSummaryPair(event.clone(), mappedSummaryList, methodRoots);
 		}else if(methodRoots.size()>0 && mappedSummaryCandidatesList.size() > 0){
 			/**
@@ -704,8 +716,10 @@ public class DualDeviceOperation extends AbstractOperation {
 				t.setPriority(Thread.MIN_PRIORITY);
 				t.interrupt();}
 			Logger.trace("Thread existed");
-			if (inputMethodVisible) { jdbDeviceExecuter.applyEvent(closeKeyboardEvent); }
-			
+//			if (inputMethodVisible) { 
+//				try { Thread.sleep(closeKeyboardSleep); } catch (InterruptedException e) { }
+//				jdbDeviceExecuter.applyEvent(closeKeyboardEvent); 
+//			}
 			List<WrappedSummary> mappedList = new ArrayList<WrappedSummary>();
 			for(int i = 0 ; i< mappedSummaryCandidatesList.size() && i< logSequences.size(); i++){
 				List<String> ithLogSequnence = logSequences.get(i);
@@ -724,13 +738,17 @@ public class DualDeviceOperation extends AbstractOperation {
 //			List<EventSummaryPair> candidates = (filterAndConstruct(potentialCombination, event.clone(), methodRoots, executedSum));
 //			result.validationCandidate = candidates;
 		}else{
-			Logger.trace();
+			Logger.trace("No BP reading");
 			/**
 			 * No method call information. Simply do the event
 			 */
 			this.jdbDeviceExecuter.applyEvent(event);
-			if (inputMethodVisible) { jdbDeviceExecuter.applyEvent(closeKeyboardEvent); }
 			actualPair = new EventSummaryPair(event.clone(), null, methodRoots);
+		}
+		
+		if (inputMethodVisible) { 
+			try { Thread.sleep(closeKeyboardSleep); } catch (InterruptedException e) { }
+			jdbDeviceExecuter.applyEvent(closeKeyboardEvent); 
 		}
 		
 		result.mappedSummaryCandidatesList = mappedSummaryCandidatesList;

@@ -303,7 +303,10 @@ public class UIModel {
 		}
 		layList.add(layout);
 		
-		if(layout.getRootNode() == null) return;
+		if(layout.getRootNode() == null){
+			Logger.trace("Layout root is null");
+			return;
+		}
 		
 		//TODO to improve  
 		/*

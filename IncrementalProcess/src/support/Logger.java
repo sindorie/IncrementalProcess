@@ -215,6 +215,7 @@ public class Logger {
 	}
 	
 	public void log(CurrentThreadInfo info, String tag, String message, int level){
+		if(enabled == false) return;
 		for(InformationFilter filter : localFilters){
 			if(filter.filtered(info, tag, message, level))return;
 		}
@@ -226,9 +227,11 @@ public class Logger {
 		}
 		if(flushOnWrite) writer.flush();
 	}
-	
-	public void setFlushOnLog(boolean enable){
-		flushOnWrite = enable;
+	public void setEnableLocal(boolean enable){
+		this.enabled = enable;
+	}
+	public void setFlushOnLog(boolean flush){
+		flushOnWrite = flush;
 	}
 	public void setMessageConstructor(MessageConstructor mesCon){
 		this.mesCon = mesCon;

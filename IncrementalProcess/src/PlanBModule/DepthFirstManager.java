@@ -345,25 +345,6 @@ public class DepthFirstManager extends AbstractManager{
 		int valCount = 0;
 		if(toValidateList != null && !toValidateList.isEmpty()){
 			for(EventSummaryPair esPair : toValidateList){
-//				if(checkEventConstraintExistence(esPair)){
-//					//such event constraint pair exist
-//					Logger.trace("Ignored: "+esPair);
-//				}else{
-//					//it is new
-//					if(this.targets != null && esPair.getSummaryList() != null){
-//						for(WrappedSummary sum : esPair.getSummaryList()){
-//							for(String line : this.targets){
-//								if(sum.executionLog.contains(line)){
-//									esPair.targetLines.add(line);
-//								}
-//							}
-//						}
-//					}
-//					if(esPair.targetLines.size() > 0){ this.targetQueue.add(esPair);
-//					}else{ validationQueue.add(esPair); }
-//					valCount += 1;
-//				}
-				
 				if(this.targets != null && esPair.getSummaryList() != null){
 					for(WrappedSummary sum : esPair.getSummaryList()){
 						for(String line : this.targets){
@@ -373,7 +354,6 @@ public class DepthFirstManager extends AbstractManager{
 						}
 					}
 				}
-//				Logger.trace("Validation: "+toValidateList.toString());
 				if(esPair.targetLines.size() > 0){ this.targetQueue.add(esPair);
 				}else{ validationQueue.add(esPair); }
 				valCount += 1;
@@ -404,7 +384,6 @@ public class DepthFirstManager extends AbstractManager{
 		}
 		
 		Set<String> lastestLineHit = this.operater.getLatestLineHit();
-		if(callBack != null && lastestLineHit != null) callBack.checkExecutionLog(lastestLineHit);
 		EventSummaryPair actual = this.operater.getLastExecutedEvent();
 		if(actual != null){
 			if(!actual.isConcreateExecuted()) throw new AssertionError();
@@ -441,7 +420,6 @@ public class DepthFirstManager extends AbstractManager{
 					}
 				}
 			}else{
-				List<String> targetHits = new ArrayList<String>();
 				if(lastestLineHit != null){
 					Iterator<String> lineIter = lastestLineHit.iterator();
 					while(lineIter.hasNext()){
@@ -455,9 +433,10 @@ public class DepthFirstManager extends AbstractManager{
 				newConcreteExecution+=1;
 			}
 		}
-//		//the actual esPair is null if reposition failure during exploration or 
-//		//solve for event failure.
-//		if(actual != null){ checkTargetReachablility(actual); }
+
+		if(callBack != null && lastestLineHit != null){
+			callBack.check(newEvents, toValidateList, lastestLineHit, actual);
+		}
 		iterationCount+= 1;
 	}
 	
@@ -573,33 +552,6 @@ public class DepthFirstManager extends AbstractManager{
 		}
 		return result;
 	}
-	
-	/**
-	 * Check the execution log in the executed summary if any target line is hit
-	 * @param executed
-	 */
-//	private boolean checkTargetReachablility(EventSummaryPair executed){
-//		if(isTargetSet() == false) return false;
-//		if(!executed.isConcreateExecuted()) throw new AssertionError();
-//		if(executed.getTryCount() == 1){ // newly executed event summary pair
-//			newConcreteExecution+=1;
-//			List<WrappedSummary> sumList = executed.getSummaryList();
-//			if(sumList == null || sumList.isEmpty()) return false;
-//			List<Event> sequence = this.operater.getLatestSequence();
-//			if(sequence == null) throw new AssertionError();
-//			for(WrappedSummary sum : sumList){
-//				if(sum == null || sum.executionLog == null) continue;
-//				for(String targetLine : targets){//check any target line is hit
-//					if(sum.executionLog.contains(targetLine)){
-//						onTargetLineReached(targetLine, sequence);
-//					}
-//				}
-//			}
-//		}else{ //executed more than one times
-//			//don't care
-//		}
-//		return false;
-//	}
 
 	private boolean isTargetSet(){
 		return this.targets != null && targets.length > 0;
@@ -688,41 +640,12 @@ public class DepthFirstManager extends AbstractManager{
 
 	public interface CallBack{
 		/**
-		 * Called when there is break point reading
-		 * @param log -- a 2 dimension matrix where each String represent a execution log
-		 * 				and each List<String> represents an executionLog for a method root
+		 * Called when the iteraion finished
+		 * @param newEvents -- a list of new events from UImodel which could be null or empty
+		 * @param list -- a list of validation candidates which could be null or empty
+		 * @param log -- a set of unique string of the latest execution log, which could be null or empty
+		 * @param executed -- the latest executed event summary pair which could be null
 		 */
-		public void checkExecutionLog(Set<String> log);
-		
-//		/**
-//		 * Called when there is new event generated
-//		 * @param newEvents
-//		 */
-//		public void checkNewEvent(List<Event> newEvents);
+		public void check(List<Event> newEvents, List<EventSummaryPair> list, Set<String> log, EventSummaryPair executed);
 	}
-
-
-	
-//	private Map<String, Set<Set<String>>> ecExistence = new HashMap<String,Set<Set<String>>>();
-	/**
-	 * Check the existence of event-constraint pair
-	 * @param esPair
-	 * @return true if exist
-	 */
-//	private boolean checkEventConstraintExistence(EventSummaryPair esPair){
-//		Event event = esPair.getEvent();
-//		String key = event.toString()+event.getSource();
-//		Set<Set<String>> constraintSet = ecExistence.get(key);
-//		if(constraintSet == null){//first encounter
-//			constraintSet = new HashSet<Set<String>>();
-//			ecExistence.put(key, constraintSet);
-//		}
-//		List<Expression> constraints = esPair.getCombinedConstraint();
-//		Set<String> organizedConstraint = new HashSet<String>();
-//		for(Expression expre : constraints){
-//			String expString = expre.toYicesStatement();
-//			organizedConstraint.add(expString);
-//		}
-//		return !constraintSet.add(organizedConstraint);
-//	}
 }
