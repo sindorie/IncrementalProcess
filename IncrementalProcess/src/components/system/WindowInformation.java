@@ -82,6 +82,9 @@ public class WindowInformation{
 	}
 	
 	public int isWithinApplciation(StaticApp app){
+		if(pkgName.startsWith("com.android.browser.BrowserActivity")){
+			return SCOPE_OUT;
+		}
 		if(pkgName.toLowerCase().contains("launcher")) return SCOPE_LAUNCHER;
 		if(pkgName.equals(app.getPackageName())) return SCOPE_WITHIN;
 		else return SCOPE_OUT;

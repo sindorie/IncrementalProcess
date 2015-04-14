@@ -56,31 +56,36 @@ public class ViewDeviceInfo {
 		mRootNode = null;
 		ProcRunner procRunner;
 		int retCode, waitTime = 10*1000;
-		try {
-			index += 1;
-			File xmlDumpFile = File.createTempFile("dump"+index+"_"+serial, ".xml");
-			
-			procRunner = getAdbRunner(serial,"shell", "rm", "/sdcard/uidump*");
-			retCode = procRunner.run(waitTime);
-			
-			String remoteFileName = "/sdcard/uidump"+index+".xml";
-	        procRunner = getAdbRunner(serial,
-	                "shell", "/system/bin/uiautomator", "dump", remoteFileName);
-	        retCode = procRunner.run(waitTime);
-	        
-	        procRunner = getAdbRunner(serial,
-	                "pull", remoteFileName, xmlDumpFile.getAbsolutePath());
-	        retCode = procRunner.run(waitTime);
-	        System.out.println(procRunner.mOutput);
-	        
-	        LayoutNode result =  buildTree(xmlDumpFile);
-	        xmlDumpFile.delete();
-	        
-	        Logger.trace(result.toFormatedString());
-	        return result;
-		} catch (IOException e) {
-			throw new AssertionError("Failure: "+e.getLocalizedMessage());
+		int iter = 0;
+		Exception lastException = null;
+		while(iter < 5){
+			try {
+				index += 1;
+				File xmlDumpFile = File.createTempFile("dump"+index+"_"+serial, ".xml");
+				
+				procRunner = getAdbRunner(serial,"shell", "rm", "/sdcard/uidump*");
+				retCode = procRunner.run(waitTime);
+				
+				String remoteFileName = "/sdcard/uidump"+index+".xml";
+		        procRunner = getAdbRunner(serial,
+		                "shell", "/system/bin/uiautomator", "dump", remoteFileName);
+		        retCode = procRunner.run(waitTime);
+		        
+		        procRunner = getAdbRunner(serial,
+		                "pull", remoteFileName, xmlDumpFile.getAbsolutePath());
+		        retCode = procRunner.run(waitTime);
+		        System.out.println(procRunner.mOutput);
+		        
+		        LayoutNode result =  buildTree(xmlDumpFile);
+		        xmlDumpFile.delete();
+		        
+		        Logger.trace(result.toFormatedString());
+		        return result;
+			} catch (IOException e) { }
+			try { Thread.sleep(1000); } catch (InterruptedException e) { lastException = e;}
+			iter += 1;
 		}
+		throw new AssertionError(lastException.getLocalizedMessage());
 	}
 	
 	public LayoutNode buildTree(File xmlFile){

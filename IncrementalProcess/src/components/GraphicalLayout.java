@@ -54,7 +54,7 @@ public class GraphicalLayout {
 	}
 	
 	public boolean hasTheSmaeLayout(LayoutNode input){
-		if( this.layout == null && input != null){ return false;
+		if( this.layout == null){ return input == null;
 		}else{ return this.layout.equals(input); }
 	}
 	

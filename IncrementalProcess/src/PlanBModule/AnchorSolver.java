@@ -61,7 +61,9 @@ public class AnchorSolver {
 		root = new DefaultMutableTreeNode();
 		leaves = new ArrayList<DefaultMutableTreeNode>();
 		Set<Expression> initCumCon = new HashSet<Expression>();
-		initCumCon.addAll(esPair.getCombinedConstraint());
+		for(Expression expre: esPair.getCombinedConstraint()){
+			initCumCon.add(expre.clone());
+		}
 		InternalEventPair content = new InternalEventPair(esPair,initCumCon);
 		if(debug){
 			Logger.trace("Starting cumulative constraints");
@@ -99,13 +101,10 @@ public class AnchorSolver {
 				InternalEventPair content = (InternalEventPair) leaf.getUserObject();
 				if(content.isComplete) continue; //do not operate on completed node
 				if(content.isFailed) continue; // no need to operated on failed node
-				
-//				Logger.trace("Cumulative constraints Point 1");
 				for(Expression expre : content.cumulativeConstraints){
 					Logger.trace(expre.getChildCount()+"-> "+expre.toYicesStatement());
 					if(expre.getChildCount() == 1){
-//						throw new AssertionError();
-						Logger.debug("Unpected on child policy: "+expre.getChildCount()+"-> "+expre.toYicesStatement());
+						Logger.debug("Unpected one child policy: "+expre.getChildCount()+"-> "+expre.toYicesStatement());
 					}
 				}
 				
@@ -119,20 +118,12 @@ public class AnchorSolver {
 				candidatePacks.add(nodeCandidates);
 				
 				Logger.trace("Candidate list");
-//				int index = 0;
 				for(InternalEventPair in : candidates){
-//					Logger.trace("InternalEventPair: "+index);
 					for(Expression expre : in.cumulativeConstraints){
 						Logger.trace(expre.toYicesStatement());
 						if(expre.getChildCount() == 1) throw new AssertionError();
 					}
-//					index += 1;
 				}
-				
-//				Logger.trace("Cumulative constraints Point 2");
-//				for(Expression expre : content.cumulativeConstraints){
-//					Logger.trace(expre.toYicesStatement());
-//				}
 			}
 			List<DefaultMutableTreeNode> toAttach = flate(candidatePacks);
 			
@@ -251,23 +242,20 @@ public class AnchorSolver {
 //					if(value.getContent().trim().isEmpty()) throw new AssertionError();
 					copy.replace(var, value.clone());
 				}
-				conResult.add(copy);
 				
 				if(copy.getChildCount() == 1){
-					Logger.trace(copy.toYicesStatement());
-					throw new AssertionError();
-				}
+					Logger.debug(copy.toYicesStatement());
+				}else{ conResult.add(copy); }
 			}
 			//add on the constraints in the path summary
 			if(additionalCumstraint!= null && !additionalCumstraint.isEmpty()){
 				for(Expression expre : additionalCumstraint){
 					if(expre.getChildCount() == 1){
-						Logger.trace(expre.toYicesStatement());
-						throw new AssertionError();
+						Logger.debug(expre.toYicesStatement());
+					}else{
+						conResult.add(expre.clone());
 					}
 				}
-				
-				conResult.addAll(additionalCumstraint);
 			}
 			
 			//check satisifiable

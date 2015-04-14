@@ -57,7 +57,7 @@ public class DepthFirstManager extends AbstractManager{
 	 */
 	private Set<String> lineHit;
 	private int totalConcreateExecution = 0, newConcreteExecution = 0, executionCount = 0;
-	private int maxIndividualValidationTry = 5;
+	private int maxIndividualValidationTry = 5, targetSolvingCount = 0;
 	private int iterationCount = 0;
 	private Decision previousDecision;
 	
@@ -577,11 +577,22 @@ public class DepthFirstManager extends AbstractManager{
 	private boolean decideReachTarget(){
 		if(isAllReached()) return false;
 		if(this.isTargetSet() && !this.targetQueue.isEmpty()){
-			EventSummaryPair esPair = this.targetQueue.peek();
-			if(esPair.getTryCount() < this.maxIndividualValidationTry &&
-					(this.newConcreteExecution >= 5 || executionCount >= 10)){
+			if(targetSolvingCount < 0){
+				targetSolvingCount += 1;
+				return false;
+			}else if(targetSolvingCount < this.targets.length * 3){
+				targetSolvingCount += 1;
 				return true;
+			}else{
+				targetSolvingCount = -targets.length * 3;
+				return false;
 			}
+			
+//			EventSummaryPair esPair = this.targetQueue.peek();
+//			if(esPair.getTryCount() < this.maxIndividualValidationTry &&
+//					(this.newConcreteExecution >= 5 || executionCount >= 10)){
+//				return true;
+//			}
 		}
 		return false;
 	}

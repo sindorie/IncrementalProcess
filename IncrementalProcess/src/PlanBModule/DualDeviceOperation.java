@@ -668,7 +668,7 @@ public class DualDeviceOperation extends AbstractOperation {
 		}break;
 		case WindowInformation.SCOPE_OUT: {
 			Logger.trace("window is outside the application");
-			resultedLayout = model.findSameOrAddLayout(focusedWin.actName, viewInfoView.loadWindowData());
+			resultedLayout = model.findSameOrAddLayout(focusedWin.actName, null);
 //			resultedLayout = new GraphicalLayout(focusedWin.actName, null);
 		}break;
 		}
