@@ -303,6 +303,8 @@ public class BreakPointReader {
 		
 		//Read until "Initializing jdb ..." show up
 		Logger.trace();
+		boolean once = false;
+		long stt = System.currentTimeMillis();
 		while(true){
 			try { Thread.sleep(100);
 			} catch (InterruptedException e) { }
@@ -313,6 +315,11 @@ public class BreakPointReader {
 				if(line.startsWith("Initializing jdb ...")) {break;}
 			} catch (IOException e) {
 				e.printStackTrace();
+			}
+			
+			if(once && System.currentTimeMillis() - stt > 1000*5){
+				once = false;
+				System.out.println("JDB initialization taking too long.");
 			}
 		}
 		return true;

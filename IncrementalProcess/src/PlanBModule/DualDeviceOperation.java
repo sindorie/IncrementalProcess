@@ -9,11 +9,14 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import javax.swing.JTree;
 import javax.swing.tree.DefaultMutableTreeNode;
 
 import android.view.KeyEvent;
 import staticFamily.StaticApp;
+import support.CommandLine;
 import support.Logger;
+import support.TreeUtility;
 import symbolic.Expression;
 import symbolic.SymbolicExecution;
 import components.BasicMatcher;
@@ -506,6 +509,7 @@ public class DualDeviceOperation extends AbstractOperation {
 					}
 					
 				}
+				try { Thread.sleep(300); } catch (InterruptedException e) { }
 				GraphicalLayout layout = model.findSameOrAddLayout(
 						winOverview.getFocusedWindow().actName, 
 						this.viewInfoView.loadWindowData());
@@ -513,7 +517,14 @@ public class DualDeviceOperation extends AbstractOperation {
 				if (layout.equals(targetLayout)) { return true; }
 			}else{ Logger.trace("No valid sequence"); }
 		}
-
+		
+//		Logger.trace(this.currentLayout.getActName() +" with "+ TreeUtility.countNodes(this.currentLayout));
+//		Logger.trace(targetLayout.getActName()+" with "+ TreeUtility.countNodes(targetLayout));
+//		Logger.trace(targetLayout.hasTheSmaeLayout(this.currentLayout.getRootNode()));
+//		Logger.registerJPanel(currentLayout.getActName(), new JTree(currentLayout.getRootNode()));
+//		Logger.registerJPanel(targetLayout.getActName(), new JTree(targetLayout.getRootNode()));
+//		CommandLine.requestInput();
+		
 		/*
 		 * Find a sequence to the target layout in the event deposit which 
 		 * records all events (other than closing keyboard) previously executed.
@@ -537,6 +548,7 @@ public class DualDeviceOperation extends AbstractOperation {
 						this.closeKeyboardForBothDevices();
 					}
 				}
+				try { Thread.sleep(300); } catch (InterruptedException e) { }
 				GraphicalLayout layout = model.findSameOrAddLayout(
 						winOverview.getFocusedWindow().actName, 
 						this.viewInfoView.loadWindowData());
@@ -544,6 +556,14 @@ public class DualDeviceOperation extends AbstractOperation {
 				if (layout.equals(targetLayout)) { return true; }
 			}
 		}
+		
+//		Logger.trace(this.currentLayout.getActName() +" with "+ TreeUtility.countNodes(this.currentLayout));
+//		Logger.trace(targetLayout.getActName()+" with "+ TreeUtility.countNodes(targetLayout));
+//		Logger.trace(targetLayout.hasTheSmaeLayout(this.currentLayout.getRootNode()));
+//		Logger.registerJPanel(currentLayout.getActName(), new JTree(currentLayout.getRootNode()));
+//		Logger.registerJPanel(targetLayout.getActName(), new JTree(targetLayout.getRootNode()));
+//		CommandLine.requestInput();
+		
 		Logger.trace("Reposition failure");
 		return false;
 	}
@@ -651,6 +671,11 @@ public class DualDeviceOperation extends AbstractOperation {
 		int scope = focusedWin.isWithinApplciation(this.app);
 		GraphicalLayout resultedLayout = null;
 		boolean inputMethodVisible = winOverview.isKeyboardVisible();
+		if (inputMethodVisible) { 
+			try { Thread.sleep(closeKeyboardSleep); } catch (InterruptedException e) { }
+			this.viewDeviceExecuter.applyEvent(closeKeyboardEvent);
+		}
+		
 		switch (scope) {
 		case WindowInformation.SCOPE_LAUNCHER: {
 			Logger.trace("window is launcher");
@@ -661,10 +686,6 @@ public class DualDeviceOperation extends AbstractOperation {
 			resultedLayout = model.findSameOrAddLayout(focusedWin.actName, viewInfoView.loadWindowData());
 //					new GraphicalLayout(focusedWin.actName,
 //					viewInfoView.loadWindowData());
-			if (inputMethodVisible) { 
-				try { Thread.sleep(closeKeyboardSleep); } catch (InterruptedException e) { }
-				this.viewDeviceExecuter.applyEvent(closeKeyboardEvent);
-			}
 		}break;
 		case WindowInformation.SCOPE_OUT: {
 			Logger.trace("window is outside the application");
@@ -672,7 +693,7 @@ public class DualDeviceOperation extends AbstractOperation {
 //			resultedLayout = new GraphicalLayout(focusedWin.actName, null);
 		}break;
 		}
-
+		
 		EventSummaryPair actualPair = null;
 		if(event.getSource().equals(GraphicalLayout.Launcher)){
 			/**
@@ -688,7 +709,7 @@ public class DualDeviceOperation extends AbstractOperation {
 				WrappedSummary mapped = findBestCandidate(mappedSummaryCandidatesList, methodRoots, method);
 				mappedSummaryList.add(mapped);
 			}
-			actualPair = new EventSummaryPair(event.clone(), mappedSummaryList, methodRoots);
+			actualPair = new EventSummaryPair(event, mappedSummaryList, methodRoots);
 		}else if(methodRoots.size()>0 && mappedSummaryCandidatesList.size() > 0){
 			/**
 			 * There is method call information. Map them to some summaries and generate validation sequences
@@ -730,7 +751,7 @@ public class DualDeviceOperation extends AbstractOperation {
 				} else { mappedList.add(summaryCandidates.get(matchIndex)); }
 			}
 			
-			actualPair = new EventSummaryPair(event.clone(), mappedList, methodRoots);
+			actualPair = new EventSummaryPair(event, mappedList, methodRoots);//dont clone
 //			/*
 //			 * Generate the symbolic event summary pair for the validation
 //			 */
@@ -743,7 +764,7 @@ public class DualDeviceOperation extends AbstractOperation {
 			 * No method call information. Simply do the event
 			 */
 			this.jdbDeviceExecuter.applyEvent(event);
-			actualPair = new EventSummaryPair(event.clone(), null, methodRoots);
+			actualPair = new EventSummaryPair(event, null, methodRoots);
 		}
 		
 		if (inputMethodVisible) { 

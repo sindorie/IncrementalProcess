@@ -11,9 +11,8 @@ import analysis.StaticInfo;
 public class APKShowCase {
 
 	public static void main(String[] args) {
-		String prefix = "/home/zhenxu/workspace/APK/";
-		String name = "TestArray.apk";
-		StaticApp app = StaticInfo.initAnalysis(prefix + name, false);
+		String name = "/home/zhenxu/AndroidTestAPKPlayGround/APK2/CalcA.apk";
+		StaticApp app = StaticInfo.initAnalysis(name, false);
 		
 		JFrame frame = new JFrame();
 		frame.setSize(500,400);

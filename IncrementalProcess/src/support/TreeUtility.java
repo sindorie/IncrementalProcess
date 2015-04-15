@@ -9,6 +9,8 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.MutableTreeNode;
 import javax.swing.tree.TreeNode;
 
+import components.GraphicalLayout;
+
 public class TreeUtility {
 	
 	/**
@@ -179,5 +181,19 @@ public class TreeUtility {
 		if(currentLevel > parentLevel){ return DEEPER;}
 		else if(currentLevel == parentLevel){ return SAME;}
 		else return SHALLOWER;
+	}
+	
+	private static int localCount;
+	public static int countNodes(GraphicalLayout layout){
+		if(layout.getRootNode() == null) return -1;
+		localCount = 0;
+		TreeUtility.depthFristSearch(layout.getRootNode(), new TreeUtility.Searcher() {
+			@Override
+			public int check(TreeNode node) {
+				localCount += 1;
+				return Searcher.NORMAL;
+			}
+		});
+		return localCount;
 	}
 }

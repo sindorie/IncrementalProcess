@@ -42,13 +42,15 @@ public class GraphicalLayout {
 			GraphicalLayout input = (GraphicalLayout)other;
 			if(!input.actName.equals(this.actName))return false;
 			if(this.layout != null){
-				if(!this.layout.equals(input.layout)){
-					return false;
-				}
+				return this.layout.equals(input.layout);
+//				if(!this.layout.equals(input.layout)){
+//					return false;
+//				}
 			}else{
-				if(input.layout != null) return false;
+				return input.layout == null;
+//				if(input.layout != null) return false;
 			}
-			return true;
+//			return true;
 		}
 		return false;
 	}

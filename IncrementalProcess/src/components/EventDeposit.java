@@ -50,8 +50,7 @@ public class EventDeposit {
 				GraphicalLayout lay = ip.e.getDest();
 				if(lay == null) continue;
 				if(lay.equals(targetLayout)){
-					found = true;
-					break;
+					found = true; break;
 				}
 				count += 1;
 			}
@@ -65,6 +64,7 @@ public class EventDeposit {
 			result = new ArrayList<Event>();
 			for(InternalPair pair : choosen){
 				result.add(pair.e);
+				if(pair.e.getDest() != null && pair.e.getDest().equals(targetLayout)) break;
 			}
 		}	
 		return result;

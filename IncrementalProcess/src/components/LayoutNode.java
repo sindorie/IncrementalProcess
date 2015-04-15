@@ -149,19 +149,34 @@ public class LayoutNode extends DefaultMutableTreeNode{
 			if(this.className == null){
 				if(input.className != null) return false;
 			}else{
-				if(!this.className.equals(input.className)) return false;
+				if(!this.className.equals(input.className)){
+					System.out.println("Difference ClassName:"+this.className+":"+input.className+";");
+					return false;
+				}
 			}
 			
-			if(this.id == null){
-				if(input.id != null) return false;
-			}else{
-				if(!this.id.equals(input.id)) return false;
-			}
+//			if(this.id == null){
+//				if(input.id != null) return false;
+//			}else{
+//				if(!this.id.equals(input.id)) return false;
+//			}
 			
-			if(this.enable != input.enable) return false;
-			if(this.scrollable != input.scrollable) return false;
-			if(this.clickable != input.clickable) return false;
-			if(this.long_clickable != input.long_clickable) return false;
+//			if(this.enable != input.enable){
+//				System.out.println("Enable attributes");
+//				return false;
+//			}
+//			if(this.scrollable != input.scrollable){
+//				System.out.println("Different scrollable");
+//				return false;
+//			}
+//			if(this.clickable != input.clickable){
+//				System.out.println("Different clickable");
+//				return false;
+//			}
+//			if(this.long_clickable != input.long_clickable){
+//				System.out.println("Different l clickable");
+//				return false;
+//			}
 			//currently use exact comparison
 			if(this.getChildCount() != input.getChildCount()) return false;
 			for(int i=0;i<this.getChildCount();i++){
@@ -176,7 +191,7 @@ public class LayoutNode extends DefaultMutableTreeNode{
 	
 	@Override
 	public String toString(){
-		return className+"-"+id;
+		return className+"-"+id+"-"+this.clickable;
 	}
 	
 	public String toFormatedString() {
