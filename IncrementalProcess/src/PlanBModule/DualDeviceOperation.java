@@ -710,6 +710,14 @@ public class DualDeviceOperation extends AbstractOperation {
 				mappedSummaryList.add(mapped);
 			}
 			actualPair = new EventSummaryPair(event, mappedSummaryList, methodRoots);
+			
+			Set<String> hitLines = new HashSet<String>();
+			for(WrappedSummary sum : mappedSummaryList){
+				if(sum.executionLog != null)
+					hitLines.addAll(sum.executionLog);
+			}
+			this.latestLineHit = hitLines;
+			
 		}else if(methodRoots.size()>0 && mappedSummaryCandidatesList.size() > 0){
 			/**
 			 * There is method call information. Map them to some summaries and generate validation sequences

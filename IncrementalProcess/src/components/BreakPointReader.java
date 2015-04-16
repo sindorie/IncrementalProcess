@@ -97,6 +97,7 @@ public class BreakPointReader {
 				lineCount += 1;
 				
 				if(line.contains("Breakpoint hit: ")){
+					line = line.trim();
 //					Logger.trace("Hit: "+line);
 					String bpInfo = line.substring(line.indexOf("Breakpoint hit: "));
 					String methodInfo = bpInfo.split(", ")[1];
@@ -104,6 +105,7 @@ public class BreakPointReader {
 					String className = methodInfo.substring(0, methodInfo.lastIndexOf("."));
 					int lineNumber = Integer.parseInt(lineInfo.substring(lineInfo.indexOf("=")+1, lineInfo.indexOf(" ")));
 					executionLog.add(className + ":" + lineNumber);
+					
 					
 					Logger.debug("Stack Peek: "+stack.peek().getSignature());
 					StaticStmt statement = findStaticStmt(stack.peek(), bpInfo);
