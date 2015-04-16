@@ -653,8 +653,8 @@ public class DualDeviceOperation extends AbstractOperation {
 		List<String> methodRoots = new ArrayList<String>();
 		List<List<WrappedSummary>> mappedSummaryCandidatesList = new ArrayList<List<WrappedSummary>>();
 		processLogcatFeedBack(methodRoots, mappedSummaryCandidatesList);
-		Logger.debug("finish reading logcat feedback, methodRoots: "+methodRoots);
-		Logger.debug("Mapped summary Candidates: " + mappedSummaryCandidatesList);
+//		Logger.debug("finish reading logcat feedback, methodRoots: "+methodRoots);
+//		Logger.debug("Mapped summary Candidates: " + mappedSummaryCandidatesList);
 		
 		/*
 		 * Check the Window information, including visible windows, keyboards
