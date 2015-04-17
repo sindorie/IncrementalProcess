@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
+import javax.swing.JFrame;
+
 import main.Paths;
 import staticFamily.StaticApp;
 import support.Logger;
@@ -16,6 +18,7 @@ import support.Utility;
 import support.Logger.CurrentThreadInfo;
 import support.Logger.InformationFilter;
 import analysis.StaticInfo;
+import components.ExpressionTranfomator;
 import components.EventDeposit.InternalPair;
 import components.system.Configuration;
 
@@ -23,7 +26,7 @@ public class SimplifiedEntryPoint {
 	boolean force = false;
 	int maxIteration = 10;
 	long maxTime = TimeUnit.MINUTES.toMillis(2);
-	int maxValidationTry = 1;
+	int maxValidationTry = 5;
 	String parentFolderName = "LogFolder"; // could be a path; debug purpose
 	boolean enableConsoleOutput = true;
 	StaticApp app;
@@ -35,7 +38,7 @@ public class SimplifiedEntryPoint {
 	
 	public static void main(String[] args) {
 		boolean checkPrevious = true;
-		String path = "/home/zhenxu/AndroidTestAPKPlayGround/APK/Dragon.apk";
+		String path = "/home/zhenxu/AndroidTestAPKPlayGround/APK3/Dragon.apk";
 		String[] targets = {};
 		
 		//Be sure to unlock screen on the virual device
@@ -91,6 +94,16 @@ public class SimplifiedEntryPoint {
 				else System.out.println(ip.esp);
 			}
 		}
+		
+		
+		//Statistic
+//		JFrame frame = new JFrame("Ignored constraints");
+//		
+//		for(int i = 0 ; i < entry.operater.getAllKnownWrappedSummaries().getSize(); i++){
+//			entry.operater.get
+//		}
+		
+//		ExpressionTranfomator.check(expression) == false;
 	
 	}
 	
@@ -170,7 +183,7 @@ public class SimplifiedEntryPoint {
 		Serializable operaterData = operater.getDumpData();
 //		Serializable modelData = model.getDumpObject();
 		if(apkIdentity != null){
-			File dumpFolder = new File(Paths.AppDataDir+"DumpFolder");
+			File dumpFolder = new File(topFolder+"DumpFolder");
 			if(dumpFolder.exists() == false) dumpFolder.mkdirs();
 			Utility.writeToDisk(manageData, topFolder+"DumpFolder/"+apkIdentity+"_manager");
 			Utility.writeToDisk(operaterData, topFolder+"DumpFolder/"+apkIdentity+"_operater");
