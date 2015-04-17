@@ -4,11 +4,13 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.PrintWriter;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
+import javax.swing.DefaultListModel;
 import javax.swing.JFrame;
 
 import main.Paths;
@@ -17,16 +19,19 @@ import support.Logger;
 import support.Utility;
 import support.Logger.CurrentThreadInfo;
 import support.Logger.InformationFilter;
+import symbolic.Expression;
+import symbolic.PathSummary;
 import analysis.StaticInfo;
 import components.ExpressionTranfomator;
 import components.EventDeposit.InternalPair;
+import components.WrappedSummary;
 import components.system.Configuration;
 
 public class SimplifiedEntryPoint {
 	boolean force = false;
-	int maxIteration = 10;
-	long maxTime = TimeUnit.MINUTES.toMillis(2);
-	int maxValidationTry = 5;
+	int maxIteration = 300;
+	long maxTime = TimeUnit.MINUTES.toMillis(30);
+	int maxValidationTry = 3;
 	String parentFolderName = "LogFolder"; // could be a path; debug purpose
 	boolean enableConsoleOutput = true;
 	StaticApp app;
@@ -38,7 +43,7 @@ public class SimplifiedEntryPoint {
 	
 	public static void main(String[] args) {
 		boolean checkPrevious = true;
-		String path = "/home/zhenxu/AndroidTestAPKPlayGround/APK3/Dragon.apk";
+		String path = "/home/zhenxu/AndroidTestAPKPlayGround/APK2/net.mandaria.tippytipper.apk";
 		String[] targets = {};
 		
 		//Be sure to unlock screen on the virual device
@@ -57,54 +62,7 @@ public class SimplifiedEntryPoint {
 			entry.startTest(targets, serials);
 		}
 		
-		/**
-		 * Data which should have been dumped
-		 * Not all data are useful for statistic
-		 */
-		entry.manager.getNewEventStack();
-		entry.manager.getValidationQueue();
-		entry.manager.getTargetQueue();
-		entry.manager.getIgnoredList();
-		entry.manager.getConfirmedList();
-		entry.manager.getTargets();
-		entry.manager.getReachedTargets();
-		entry.manager.getAllHitList();
-		entry.manager.getNewEventModel();
-		entry.manager.getExecutedEventModel();
-		entry.manager.getTargetArea();
-		entry.manager.getClassCatergoryPane();
-		entry.manager.getTargetArea();
-		entry.manager.getValidArea();
-		
-		entry.operater.getEventDeposit();
-		entry.operater.getEventSummaryDeposit();
-		entry.operater.getMethodSigToSummaries();
-		entry.operater.getAllKnownPathSummaries();
-		entry.operater.getAllKnownWrappedSummaries();
-		
-		System.out.println("HitLines: ");
-		entry.manager.getAllHitList().forEach(new Consumer<String>(){//just play around 
-			@Override public void accept(String t) { System.out.println(t); }
-		});
-		
-		List<List<InternalPair>> listOfEvents = entry.operater.getEventDeposit().getRecords();
-		for(List<InternalPair> list : listOfEvents){
-			for(InternalPair ip: list){
-				if(ip.esp == null) System.out.println(ip.e);
-				else System.out.println(ip.esp);
-			}
-		}
-		
-		
-		//Statistic
-//		JFrame frame = new JFrame("Ignored constraints");
-//		
-//		for(int i = 0 ; i < entry.operater.getAllKnownWrappedSummaries().getSize(); i++){
-//			entry.operater.get
-//		}
-		
-//		ExpressionTranfomator.check(expression) == false;
-	
+		Statistic.probe(entry.operater, entry.manager);
 	}
 	
 	public SimplifiedEntryPoint(StaticApp app){
