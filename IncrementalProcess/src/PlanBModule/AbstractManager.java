@@ -1,5 +1,6 @@
 package PlanBModule;
 
+import java.io.Serializable;
 import java.util.List;
 import java.util.Set;
 
@@ -94,7 +95,7 @@ public abstract class AbstractManager {
 	public abstract void onIterationStepEnd();
 
 	
-	public abstract Object getDumpData();
+	public abstract Serializable getDumpData();
 	
 	public abstract void restore(Object dumped);
 	

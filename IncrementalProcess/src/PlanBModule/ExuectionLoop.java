@@ -1,7 +1,12 @@
 package PlanBModule;
 
+import java.io.File;
+import java.io.Serializable;
+
+import main.Paths;
 import PlanBModule.AbstractManager.Decision;
 import support.Logger;
+import support.Utility;
 import components.Event;
 import components.EventSummaryPair;
 
@@ -13,6 +18,7 @@ public class ExuectionLoop implements Runnable{
 	private boolean working = true;
 	private int iterationCount = 0, maxCount = -1;
 	private long startTime = -1, maxTime = -1; 
+//	private String dumpTag;
 	
 	public ExuectionLoop(
 			AbstractManager manager, 
@@ -32,43 +38,47 @@ public class ExuectionLoop implements Runnable{
 		manager.onPreparation();
 		operation.onPreparation();
 		
-		while(working){
-			if(callBack != null){ callBack.onIterationStart(this); }
-			manager.onIterationStepStart();
-			Decision nextOperation = manager.decideOperation();
-			if(callBack != null){ callBack.onDecisionMade(this, nextOperation); }
-			
-			if(nextOperation.equals(Decision.EXPLORE)){
-				manager.onExplorationStepStart();
-				Event nextEvent = manager.getNextExplorationEvent();
-				operation.onExplorationProcess(nextEvent);
-				manager.onExplorationStepEnd();
-			}else if(nextOperation.equals(Decision.EXPAND)){
-				manager.onExpansionStepStart();
-				EventSummaryPair esPair = manager.getNextExpansionEvent();
-				operation.onExpansionProcess(esPair);
-				manager.onExplorationStepEnd();
-			}else if(nextOperation.equals(Decision.REACHTARGET)){
-				manager.onReachTargetStart();
-				EventSummaryPair target = manager.getNextTargetSummary();
-				operation.onExpansionProcess(target);
-				manager.onReachTargetEnd();
-			}else if(nextOperation.equals(Decision.END)){
-				working = false;
+		try{
+			while(working){
+				if(callBack != null){ callBack.onIterationStart(this); }
+				manager.onIterationStepStart();
+				Decision nextOperation = manager.decideOperation();
+				if(callBack != null){ callBack.onDecisionMade(this, nextOperation); }
+				
+				if(nextOperation.equals(Decision.EXPLORE)){
+					manager.onExplorationStepStart();
+					Event nextEvent = manager.getNextExplorationEvent();
+					operation.onExplorationProcess(nextEvent);
+					manager.onExplorationStepEnd();
+				}else if(nextOperation.equals(Decision.EXPAND)){
+					manager.onExpansionStepStart();
+					EventSummaryPair esPair = manager.getNextExpansionEvent();
+					operation.onExpansionProcess(esPair);
+					manager.onExplorationStepEnd();
+				}else if(nextOperation.equals(Decision.REACHTARGET)){
+					manager.onReachTargetStart();
+					EventSummaryPair target = manager.getNextTargetSummary();
+					operation.onExpansionProcess(target);
+					manager.onReachTargetEnd();
+				}else if(nextOperation.equals(Decision.END)){
+					working = false;
+				}
+				if(callBack != null){ callBack.onOperationFinish(this); }
+				manager.onIterationStepEnd();
+				iterationCount += 1;
+				
+				long currentTime = System.currentTimeMillis();
+				if( (maxCount > 0 && iterationCount > maxCount) || /*Iteration Limit*/
+					(maxTime > 0 && currentTime - startTime > maxTime) ){ /*Time Limit*/ 
+					break;
+				}
 			}
-			if(callBack != null){ callBack.onOperationFinish(this); }
-			manager.onIterationStepEnd();
-			iterationCount += 1;
-			
-			long currentTime = System.currentTimeMillis();
-			if( (maxCount > 0 && iterationCount > maxCount) || /*Iteration Limit*/
-				(maxTime > 0 && currentTime - startTime > maxTime) ){ /*Time Limit*/ 
-				break;
-			}
-		}
+		}catch(Exception e1){ e1.printStackTrace();
+		}catch(Error e){ e.printStackTrace(); }
 		
 		operation.onFinish();
 		manager.onFinish();
+		
 		long milliseconds = System.currentTimeMillis() - this.startTime;
 		int seconds = (int) (milliseconds / 1000) % 60 ;
 		int minutes = (int) ((milliseconds / (1000*60)) % 60);

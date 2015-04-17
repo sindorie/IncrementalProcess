@@ -41,8 +41,6 @@ public class Logger {
 	private static boolean gEnabled = true;
 	private static int tabCount = 0;
 
-	
-	
 	/*Class initialization*/
 	static{
 		StandardConstructor = new MessageConstructor(){
@@ -102,6 +100,10 @@ public class Logger {
 		informationFrame.setSize(800, 600);
 		informationFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		//informationFrame will only show up if there is at least one registered panel
+	}
+	
+	public static void removeAllUI(){
+		tabbedPane.removeAll();
 	}
 	
 	public static void addWorker(Logger worker){
@@ -218,6 +220,9 @@ public class Logger {
 		if(enabled == false) return;
 		for(InformationFilter filter : localFilters){
 			if(filter.filtered(info, tag, message, level))return;
+		}
+		if(writer == null){
+			return;
 		}
 		if(mesCon == null){
 			String result = StandardConstructor.construct(info, tag, message, level);

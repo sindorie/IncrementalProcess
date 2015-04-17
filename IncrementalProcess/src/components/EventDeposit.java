@@ -1,14 +1,15 @@
 package components;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
 import support.Logger;
 
-public class EventDeposit { 
+public class EventDeposit implements Serializable{ 
 	List<List<InternalPair>> records = new ArrayList<List<InternalPair>>();
 	List<InternalPair> currentSequence = null;
-	final Object simpleLock = new Object();
+//	final Object simpleLock = new Object();
 	
 	public void hasReinstalled(){ 
 		Logger.trace();
@@ -21,7 +22,7 @@ public class EventDeposit {
 	}
 	
 	public void addEvent(Event e, EventSummaryPair esPair){
-		synchronized(simpleLock){
+//		synchronized(simpleLock){
 			Logger.trace(e);
 			if(currentSequence == null){
 				currentSequence = new ArrayList<InternalPair>();
@@ -29,6 +30,16 @@ public class EventDeposit {
 			}
 			InternalPair ip = new InternalPair(e,esPair);
 			currentSequence.add(ip);
+//		}
+	}
+	
+	public List<List<InternalPair>>  getRecords(){
+		return this.records;
+	}
+	
+	public void addLatestESPair(EventSummaryPair esPair){
+		if(currentSequence != null && !currentSequence.isEmpty()){
+			currentSequence.get(currentSequence.size()-1).esp = esPair;
 		}
 	}
 	
@@ -86,7 +97,7 @@ public class EventDeposit {
 	 * @author zhenxu
 	 *
 	 */
-	private class InternalPair{
+	public class InternalPair implements Serializable{
 		InternalPair(Event e, EventSummaryPair esp){
 			this.e = e; this.esp = esp;
 		};

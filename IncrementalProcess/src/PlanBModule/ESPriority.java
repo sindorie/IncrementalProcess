@@ -1,10 +1,11 @@
 package PlanBModule;
 
+import java.io.Serializable;
 import java.util.Comparator;
 
 import components.EventSummaryPair;
 
-public class ESPriority implements Comparator<EventSummaryPair>{
+public class ESPriority implements Comparator<EventSummaryPair>, Serializable{
 
 	/**
 	 * Calculate the priority of input

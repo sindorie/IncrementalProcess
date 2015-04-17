@@ -3,6 +3,7 @@ package components;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.Dimension;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -32,13 +33,16 @@ import symbolic.Expression;
 import symbolic.PathSummary;
 import symbolic.Variable;
 
-public class WrappedSummary {
+public class WrappedSummary implements Serializable {
 	
 	private static boolean enableGUI = true;
-	private static DefaultListModel<PathSummary> model_raw;
-	private static DefaultListModel<WrappedSummary> mode_wrap;
+	public static DefaultListModel<PathSummary> model_raw;
+	public static DefaultListModel<WrappedSummary> mode_wrap;
 	private static JComponent rawSummaryPanel, wrappedSumPanel;
 	static{
+		model_raw = new DefaultListModel<PathSummary>();
+		mode_wrap = new DefaultListModel<WrappedSummary>();
+		
 		if(enableGUI){
 			rawSummaryPanel = createRawSummaryPanel();
 			wrappedSumPanel = createWrappedSummaryPanel();
@@ -60,11 +64,9 @@ public class WrappedSummary {
 		this.preprocessConstraint(summary.getPathConditions());
 		this.preprocessSymbolicStates(summary.getSymbolicStates());
 		this.methodSignature = summary.getMethodSignature();
-		
-		if(enableGUI && summary!=null){ // && !model.contains(summary)
-			model_raw.addElement(summary);
-			mode_wrap.addElement(this);
-		}
+
+		model_raw.addElement(summary);
+		mode_wrap.addElement(this);
 	}
 	
 	public static List<PathSummary> unwrapSummary(List<WrappedSummary> wsList){
@@ -170,8 +172,6 @@ public class WrappedSummary {
 	
 	
 	private static JComponent createRawSummaryPanel(){
-		model_raw = new DefaultListModel<PathSummary>();
-		
 		final JList<PathSummary> leftList = new JList<PathSummary>();
 //		leftList.setPreferredSize(new Dimension());
 		leftList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -268,8 +268,6 @@ public class WrappedSummary {
 	}
 	
 	private static JComponent createWrappedSummaryPanel(){
-		mode_wrap = new DefaultListModel<WrappedSummary>();
-		
 		final JList<WrappedSummary> wSumList = new JList<WrappedSummary>();
 		wSumList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		wSumList.setModel(mode_wrap);

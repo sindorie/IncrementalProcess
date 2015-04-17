@@ -3,6 +3,7 @@ package PlanBModule;
 import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.GridLayout;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -226,6 +227,7 @@ public class DepthFirstManager extends AbstractManager{
 			
 			JTabbedPane lineHitPane = new JTabbedPane();
 			classCatergoryPane = new HashMap<String, JTextArea>();
+			
 			lineHit = new HashSet<String>(){
 				@Override
 				public boolean add(String line){
@@ -484,59 +486,115 @@ public class DepthFirstManager extends AbstractManager{
 	}
 
 	@Override
-	public Object getDumpData() {
-		List<Object> list = new ArrayList<Object>();
-		list.add(newEventStack);
-		list.add(validationQueue);
-		list.add(targetQueue);
-		list.add(ignoredList);
-		list.add(confirmedList);
+	public Serializable getDumpData() {
+		ArrayList<Object> list = new ArrayList<Object>();
+		Stack<Event> copyStack = new Stack<Event>();
+		copyStack.addAll(newEventStack);
+		list.add(copyStack);
+		list.add(new PriorityQueue<EventSummaryPair>(validationQueue));
+		list.add(new PriorityQueue<EventSummaryPair>(targetQueue));
+		list.add(new ArrayList<EventSummaryPair>(ignoredList));
+		list.add(new ArrayList<EventSummaryPair>(confirmedList));
 		list.add(targets);
-		list.add(reachedTargets);
-		list.add(lineHit);
+		list.add((HashMap<String, Boolean>)reachedTargets);
+		list.add(new HashSet<String>(lineHit));
 		list.add(totalConcreateExecution);
 		list.add(executionCount);
 		
 		list.add(newEventModel);
 		list.add(executedEventModel);
-		list.add(targetTextAreas);
-		list.add(classCatergoryPane);
+		list.add((HashMap<String, JTextArea>)targetTextAreas);
+		list.add((HashMap<String, JTextArea>)classCatergoryPane);
 		list.add(targetArea);
 		list.add(validArea);
 		
-		return list.toArray(new Object[0]);
+		return list;
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
 	public void restore(Object dumped) {
-		Object[] list = (Object[]) dumped;
-		int index = 0;
-		newEventStack = (Stack<Event>) list[index]; index++;
-		validationQueue = (PriorityQueue<EventSummaryPair>) list[index]; index++;
-		targetQueue = (PriorityQueue<EventSummaryPair>) list[index]; index++;
-		ignoredList = (List<EventSummaryPair>) list[index]; index++;
-		confirmedList = (List<EventSummaryPair>) list[index]; index++;
-		targets = (String[]) list[index]; index++;
-		reachedTargets = (Map<String, Boolean>) list[index]; index++;
-		lineHit = (Set<String>) list[index]; index++;
-		totalConcreateExecution = (Integer)list[index]; index++;
-		executionCount = (Integer)list[index]; index++;
+		ArrayList<Serializable> list = (ArrayList<Serializable>) dumped;
+		newEventStack = (Stack<Event>) list.remove(0);
+		validationQueue = (PriorityQueue<EventSummaryPair>)list.remove(0);
+		targetQueue = (PriorityQueue<EventSummaryPair>) list.remove(0);
+		
+		ignoredList = (List<EventSummaryPair>) list.remove(0);
+		confirmedList = (List<EventSummaryPair>) list.remove(0);
+		targets = (String[]) list.remove(0);
+		reachedTargets = (Map<String, Boolean>) list.remove(0);
+		lineHit = (Set<String>) list.remove(0);
+		totalConcreateExecution = (Integer)list.remove(0);
+		executionCount = (Integer)list.remove(0);
 		
 		/*GUI related*/
-		newEventModel = (DefaultTableModel) list[index]; index++;
-		executedEventModel = (DefaultTableModel) list[index]; index++;
-		targetTextAreas = (Map<String, JTextArea>) list[index]; index++;
-		classCatergoryPane = (Map<String, JTextArea>) list[index]; index++;
-		targetArea = (JTextArea) list[index]; index++;
-		validArea = (JTextArea) list[index]; index++;
+		newEventModel = (DefaultTableModel) list.remove(0);
+		executedEventModel = (DefaultTableModel) list.remove(0);
+		targetTextAreas = (Map<String, JTextArea>) list.remove(0);
+		classCatergoryPane = (Map<String, JTextArea>) list.remove(0);
+		targetArea = (JTextArea) list.remove(0);
+		validArea = (JTextArea) list.remove(0);
 	}
 	
 	
+	public Stack<Event> getNewEventStack() {
+		return newEventStack;
+	}
+
+	public PriorityQueue<EventSummaryPair> getValidationQueue() {
+		return validationQueue;
+	}
+
+	public PriorityQueue<EventSummaryPair> getTargetQueue() {
+		return targetQueue;
+	}
+
+	public List<EventSummaryPair> getIgnoredList() {
+		return ignoredList;
+	}
+
+	public List<EventSummaryPair> getConfirmedList() {
+		return confirmedList;
+	}
+
+	public String[] getTargets() {
+		return targets;
+	}
+
+	public Map<String, Boolean> getReachedTargets() {
+		return reachedTargets;
+	}
+
+	public DefaultTableModel getNewEventModel() {
+		return newEventModel;
+	}
+
+	public DefaultTableModel getExecutedEventModel() {
+		return executedEventModel;
+	}
+
+	public Map<String, JTextArea> getTargetTextAreas() {
+		return targetTextAreas;
+	}
+
+	public Map<String, JTextArea> getClassCatergoryPane() {
+		return classCatergoryPane;
+	}
+
+	public JTextArea getTargetArea() {
+		return targetArea;
+	}
+
+	public JTextArea getValidArea() {
+		return validArea;
+	}
+
 	@Override
 	public Set<String> getAllHitList() {
 		return this.lineHit;
 	}
+	
+	
 	
 	public void setMaxIndividualValidationTry(int max){
 		this.maxIndividualValidationTry = max;

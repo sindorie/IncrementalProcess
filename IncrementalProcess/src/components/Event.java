@@ -1,5 +1,6 @@
 package components;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -9,7 +10,7 @@ import org.jgrapht.graph.DefaultEdge;
  * @author zhenxu
  *
  */
-public class Event extends DefaultEdge {
+public class Event extends DefaultEdge implements Serializable{
 	
 	static int aIndex = 0; //not sure if 100% necessary as e1 == e2 seems sufficient for the purpose
 	int eventType, index = aIndex++; 

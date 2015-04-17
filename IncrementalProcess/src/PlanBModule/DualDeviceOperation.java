@@ -1,5 +1,6 @@
 package PlanBModule;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -9,6 +10,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import javax.swing.DefaultListModel;
 import javax.swing.JTree;
 import javax.swing.tree.DefaultMutableTreeNode;
 
@@ -18,6 +20,7 @@ import support.CommandLine;
 import support.Logger;
 import support.TreeUtility;
 import symbolic.Expression;
+import symbolic.PathSummary;
 import symbolic.SymbolicExecution;
 import components.BasicMatcher;
 import components.BreakPointReader;
@@ -390,23 +393,43 @@ public class DualDeviceOperation extends AbstractOperation {
 	}
 	
 	@Override
-	public Object getDumpData() {
-		List<Object> list = new ArrayList<Object>();
+	public Serializable getDumpData() {
+		ArrayList<Serializable> list = new ArrayList<Serializable>();
 		list.add(eventDeposit);
 		list.add(eventSummaryDeposit);
-		list.add(methodSigToSummaries);
-		return list.toArray(new Object[0]);
+		list.add((HashMap<String,List<WrappedSummary>>)methodSigToSummaries);
+		list.add(WrappedSummary.model_raw);
+		list.add(WrappedSummary.mode_wrap);
+		
+		return list;
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
 	public void restore(Object dumped) {
-		Object[] list = (Object[]) dumped;
-		eventDeposit = (EventDeposit) list[0];
-		eventSummaryDeposit = (EventSummaryDeposit) list[1];
-		methodSigToSummaries = (Map<String, List<WrappedSummary>>) list[2];
+		ArrayList<Serializable> list = (ArrayList<Serializable>) dumped;
+		eventDeposit = (EventDeposit) list.remove(0);
+		eventSummaryDeposit = (EventSummaryDeposit) list.remove(0);
+		methodSigToSummaries = (Map<String, List<WrappedSummary>>) list.remove(0);
+		WrappedSummary.model_raw = (DefaultListModel<PathSummary>)list.remove(0);
+		WrappedSummary.mode_wrap = (DefaultListModel<WrappedSummary>)list.remove(0);
 	}
 	
+	public EventDeposit getEventDeposit(){
+		return this.eventDeposit;
+	}
+	public Map<String, List<WrappedSummary>> getMethodSigToSummaries(){
+		return this.methodSigToSummaries;
+	}
+	public EventSummaryDeposit getEventSummaryDeposit(){
+		return this.eventSummaryDeposit;
+	}
+	public DefaultListModel<PathSummary> getAllKnownPathSummaries(){
+		return WrappedSummary.model_raw;
+	}
+	public DefaultListModel<WrappedSummary> getAllKnownWrappedSummaries(){
+		return WrappedSummary.mode_wrap;
+	}
 	public EventSummaryDeposit getESDeposit(){
 		return this.eventSummaryDeposit;
 	}
@@ -784,6 +807,7 @@ public class DualDeviceOperation extends AbstractOperation {
 		result.methodRoots = methodRoots;
 		result.resultedLayout = resultedLayout;
 		result.esPair = actualPair;
+		this.eventDeposit.addLatestESPair(actualPair);
 		Logger.trace("End");
 		return result;
 	}

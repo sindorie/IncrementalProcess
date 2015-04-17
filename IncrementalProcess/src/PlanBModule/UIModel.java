@@ -1,5 +1,6 @@
 package PlanBModule;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -46,7 +47,7 @@ import components.GraphicalLayout;
 import components.LayoutNode;
 
 //extends AbstractModel<GraphicalLayout, EventSummaryPair, Event>
-public class UIModel {
+public class UIModel{
 	private boolean enableGUI = true;
 	
 	private Map<String,List<GraphicalLayout>> actLayouts = new HashMap<String,List<GraphicalLayout>>();
@@ -166,6 +167,47 @@ public class UIModel {
 		}
 	}
 	
+	public Serializable getDumpObject(){
+		ArrayList<Serializable> list = new ArrayList<Serializable>();
+		list.add(new HashMap<String,List<GraphicalLayout>>(actLayouts));
+		list.add(new ListenableDirectedGraph<GraphicalLayout, EventSummaryPair>(graph));
+		list.add(new HashMap<GraphicalLayout, List<EventSummaryPair>>(vertex_to_loopEdges));
+		list.add(root);
+		list.add(new ArrayList<EventSummaryPair>(edgesReference));
+		list.add(new HashMap<String, SequenceStatus>(solvedSummaryRecord));
+		return list;
+	}
+	
+	public void restore(Object dumped){
+		ArrayList<Serializable> list = (ArrayList<Serializable>)dumped;
+		actLayouts = (Map<String, List<GraphicalLayout>>) list.remove(0);
+		graph = (ListenableDirectedGraph<GraphicalLayout, EventSummaryPair>) list.remove(0);
+		vertex_to_loopEdges = (Map<GraphicalLayout, List<EventSummaryPair>>) list.remove(0);
+		root = (GraphicalLayout) list.remove(0);
+		edgesReference = (List<EventSummaryPair>) list.remove(0);
+		solvedSummaryRecord = (Map<String, SequenceStatus>) list.remove(0);
+	}
+	
+	public Map<String, List<GraphicalLayout>> getActLayouts() {
+		return actLayouts;
+	}
+
+	public Map<GraphicalLayout, List<EventSummaryPair>> getVertex_to_loopEdges() {
+		return vertex_to_loopEdges;
+	}
+
+	public GraphicalLayout getRoot() {
+		return root;
+	}
+
+	public List<EventSummaryPair> getEdgesReference() {
+		return edgesReference;
+	}
+
+	public Map<String, SequenceStatus> getSolvedSummaryRecord() {
+		return solvedSummaryRecord;
+	}
+
 	public List<EventSummaryPair> findSequence(GraphicalLayout source,GraphicalLayout dest) {
 		return DijkstraShortestPath.findPathBetween(this.graph, source, dest);
 	}
@@ -394,7 +436,7 @@ public class UIModel {
 		}
 	}
 	
-	public class SequenceStatus{
+	public class SequenceStatus implements Serializable{
 		public List<List<Event>> sequences = new ArrayList<List<Event>>();
 		public List<List<Event>> triedSequence = new ArrayList<List<Event>>();
 		public int vertexAmount, edgeAmount; //index = 0,

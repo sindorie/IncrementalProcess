@@ -1,5 +1,10 @@
 package support;
 
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,5 +54,33 @@ public class Utility {
 				return result;
 			}
 		}
+	}
+	
+	public static boolean writeToDisk(Object object, String filePath){
+		try{
+			FileOutputStream fout = new FileOutputStream(filePath);
+			ObjectOutputStream oos = new ObjectOutputStream(fout);   
+			oos.writeObject(object);
+			oos.close();
+			fout.close();
+		   }catch(Exception ex){
+			   ex.printStackTrace();
+			   return false;
+		   }
+		return true;
+	}
+	
+	public static Object readFromDisk(String filePath){
+		try {
+			FileInputStream fin = new FileInputStream(filePath);
+			ObjectInputStream oin = new ObjectInputStream(fin);
+			Object o = oin.readObject();
+			oin.close();
+			fin.close();
+			return o;
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
 	}
 }

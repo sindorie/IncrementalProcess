@@ -1,11 +1,12 @@
 package components;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
 import support.Logger;
 
-public class GraphicalLayout { 
+public class GraphicalLayout implements Serializable{ 
 	
 	public final static GraphicalLayout Launcher;
 	public final List<Event> candidates = new ArrayList<Event>();
