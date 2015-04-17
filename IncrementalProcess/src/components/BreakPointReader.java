@@ -88,7 +88,7 @@ public class BreakPointReader {
 				String line = readLog.get(lineCount);
 				if(line.trim().endsWith("Nothing suspended.")){ 
 					Logger.trace("Nothing suspended");
-					if(tryCount > 3){
+					if(tryCount > 5){
 						break;
 					}else{
 						tryCount += 1;
@@ -375,7 +375,7 @@ public class BreakPointReader {
 				try { Thread.sleep(10);
 				} catch (InterruptedException e) { }
 				long currentTime = System.currentTimeMillis();
-				if(currentTime - startTime > 300){ 
+				if(currentTime - startTime > 500){ 
 					break; 
 				}
 			}

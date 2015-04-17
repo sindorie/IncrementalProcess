@@ -740,7 +740,7 @@ public class DualDeviceOperation extends AbstractOperation {
 				latestLineHit = lineHit;
 			}
 			
-			try { t.join(200); } catch (InterruptedException e) { e.printStackTrace(); }
+			try { t.join(1000); } catch (InterruptedException e) { e.printStackTrace(); }
 			if(t.isAlive()){ 
 				t.setPriority(Thread.MIN_PRIORITY);
 				t.interrupt();}
