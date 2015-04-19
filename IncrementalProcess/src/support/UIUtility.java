@@ -1,6 +1,7 @@
 package support;
 
 import java.awt.Component;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -254,5 +255,55 @@ public class UIUtility {
         topSpliter.setDividerLocation(150);
 		
 		return topSpliter;
+	}
+	
+	public static List<JComponent> createComponentsForPathSummary(PathSummary sum){
+		List<JComponent> list = new ArrayList<JComponent>();
+		list.add(new JLabel("Signature:"+sum.getMethodSignature()));					
+		
+		String toShow = String.join("\n", sum.getExecutionLog());
+		JTextArea area = new JTextArea();
+		JScrollPane areaScroll = new JScrollPane();
+		areaScroll.setSize(500, 200);
+		areaScroll.setViewportView(area);
+		area.setText(toShow);
+		list.add(areaScroll);
+		
+		list.add(new JLabel(String.format("Constraints: ")));
+		for(Expression expre : sum.getPathConditions()){
+			list.add(new JLabel("<html>"+expre.toYicesStatement()+"</html>"));
+			JTree tree = new JTree(expre);
+			JScrollPane treeScroll = new JScrollPane();
+			treeScroll.setViewportView(tree);
+			list.add(treeScroll);
+			TreeUtility.expandJTree(tree, -1);
+		}
+		list.add(new JLabel(String.format("Constraints variables: ")));
+		for(Expression expre : sum.getPathConditions()){
+			Set<Variable> vars = expre.getUniqueVarSet();
+			for(Variable var : vars){
+				JLabel varLabel = new JLabel(var.toVariableDefStatement());
+				list.add(varLabel);
+			}
+		}
+		
+		list.add(new JLabel(String.format("Symbolic states:")));
+		for(Expression expre : sum.getSymbolicStates()){
+			list.add(new JLabel("<html>"+expre.toYicesStatement()+"</html>"));
+			JTree tree = new JTree(expre);
+			JScrollPane treeScroll = new JScrollPane();
+			treeScroll.setViewportView(tree);
+			list.add(treeScroll);
+			TreeUtility.expandJTree(tree, -1);
+		}
+		list.add(new JLabel(String.format("Symbolic variables: ")));
+		for(Expression expre : sum.getSymbolicStates()){
+			Set<Variable> vars = expre.getUniqueVarSet();
+			for(Variable var : vars){
+				JLabel varLabel = new JLabel(var.toVariableDefStatement());
+				list.add(varLabel);
+			}
+		}
+		return list;
 	}
 }

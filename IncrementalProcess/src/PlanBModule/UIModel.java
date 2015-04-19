@@ -394,6 +394,11 @@ public class UIModel{
 							if(!toAdd.contains(next)){
 								toAdd.add(next); 
 							}
+						}else if(node.checkable){
+							Event next = EventFactory.createClickEvent(layout, node);
+							if(!toAdd.contains(next)){
+								toAdd.add(next); 
+							}
 						}
 					}else{
 						if(node.getParent() != null && node.getParent().clickable){
@@ -439,7 +444,7 @@ public class UIModel{
 	public class SequenceStatus implements Serializable{
 		public List<List<Event>> sequences = new ArrayList<List<Event>>();
 		public List<List<Event>> triedSequence = new ArrayList<List<Event>>();
-		public int vertexAmount, edgeAmount; //index = 0,
+		public int lastRecordVertexAmount, lastRecordEdgeAmount; //index = 0,
 		
 		public SequenceStatus(List<List<Event>> inputSequence, UIModel model){ 
 			for(List<Event> eS : inputSequence){
@@ -447,8 +452,8 @@ public class UIModel{
 					sequences.add(eS);
 				}
 			}
-			vertexAmount = model.getGraph().vertexSet().size();
-			edgeAmount = model.getGraph().edgeSet().size();
+			lastRecordVertexAmount = model.getGraph().vertexSet().size();
+			lastRecordEdgeAmount = model.edgesReference.size();
 		}
 
 		/**
@@ -458,8 +463,8 @@ public class UIModel{
 		 */
 		public boolean needUpdate(UIModel model){
 			int currentVertexAmount = model.getGraph().vertexSet().size();
-			int currentEdgeAmount = model.getGraph().edgeSet().size();
-			boolean result =  currentVertexAmount != vertexAmount || currentEdgeAmount != edgeAmount;
+			int currentEdgeAmount = model.edgesReference.size();
+			boolean result =  currentVertexAmount != lastRecordVertexAmount || currentEdgeAmount != lastRecordEdgeAmount;
 			return result;
 		}
 		
@@ -471,8 +476,8 @@ public class UIModel{
 					}
 				}
 			}
-			vertexAmount = model.getGraph().vertexSet().size();
-			edgeAmount = model.getGraph().edgeSet().size();
+			lastRecordVertexAmount = model.getGraph().vertexSet().size();
+			lastRecordEdgeAmount = model.edgesReference.size();
 		}
 		
 		public List<Event> getNext(){

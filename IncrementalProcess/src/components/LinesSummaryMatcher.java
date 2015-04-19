@@ -14,11 +14,11 @@ public interface LinesSummaryMatcher {
 	 */
 	public int matchSummary(List<String> lineHits, List<PathSummary> summaries);
 	
-	/**
-	 * check if the two break point records match with each other 
-	 * @param A
-	 * @param B
-	 * @return
-	 */
-	public boolean compareBPRecords(List<String> A, List<String> B);
+//	/**
+//	 * check if the two break point records match with each other 
+//	 * @param A
+//	 * @param B
+//	 * @return
+//	 */
+//	public boolean compareBPRecords(List<String> A, List<String> B);
 }

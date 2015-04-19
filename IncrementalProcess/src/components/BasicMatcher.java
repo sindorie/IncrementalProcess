@@ -1,9 +1,17 @@
 package components;
 
+import java.util.ArrayList;
 import java.util.List;
+
+import staticFamily.StaticApp;
 import symbolic.PathSummary;
 
 public class BasicMatcher implements LinesSummaryMatcher{
+	StaticApp app;
+	public BasicMatcher(StaticApp app){
+		this.app = app;
+	}
+	
 	public int matchSummary(List<String> concreteLines, List<PathSummary> psList){
 		int index = 0;
 		for (PathSummary ps : psList){
@@ -14,18 +22,36 @@ public class BasicMatcher implements LinesSummaryMatcher{
 		return -1;
 	}
 	
-	public boolean compareBPRecords(List<String> A, List<String> B){
+	private boolean compareBPRecords(List<String> concrete, List<String> symbolic){
 //		System.out.println(A);
 //		System.out.println(B);
+//		boolean result = true;
+//		if (A.size() < 1 || B.size() < 1 || A.size() != B.size()){
+//			result = false;
+//		}else{
+//			for (int i = 1, len = A.size(); i < len; i++){
+//				if (!A.get(i).equals(B.get(i))){
+//					result = false; break;
+//				}
+//			}
+//		}
+////		System.out.println("Comparison: "+ result);
+//		return result;
+
+		List<String> newSymbolic = new ArrayList<String>();
+		for (String s : symbolic) {
+			String className = s.split(":")[0];
+			if (!app.classBelongToModelDex(className)){ newSymbolic.add(s); }
+		}
 		boolean result = true;
-		if (A.size() < 1 || B.size() < 1 || A.size() != B.size()){
+		if (newSymbolic.size() < 1 ||  concrete.size() < 1 ||  newSymbolic.size() != concrete.size() ){
 			result = false;
-		}else{
-			for (int i = 1, len = A.size(); i < len; i++){
-				if (!A.get(i).equals(B.get(i))){
-					result = false; break;
-				}
-			}
+		}else {
+//			for (int i = 0; i < concrete.size(); i++) {
+//				if (!newSymbolic.get(i).equals(concrete.get(i)))
+//					return false;
+//			}
+			return newSymbolic.equals(concrete);
 		}
 //		System.out.println("Comparison: "+ result);
 		return result;

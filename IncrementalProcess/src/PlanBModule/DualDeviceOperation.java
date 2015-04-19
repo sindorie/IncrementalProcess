@@ -107,7 +107,7 @@ public class DualDeviceOperation extends AbstractOperation {
 		jdbDeviceExecuter = new Executer(jdbDeviceSerial);
 		symbolicExecution = new SymbolicExecution(app);
 		symbolicExecution.debug = false;
-		matcher = new BasicMatcher();
+		matcher = new BasicMatcher(app);
 		eventSummaryDeposit = new EventSummaryDeposit();
 		
 		closeKeyboardEvent = EventFactory.createCloseKeyboardEvent();

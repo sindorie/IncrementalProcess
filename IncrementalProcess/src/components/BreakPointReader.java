@@ -98,61 +98,70 @@ public class BreakPointReader {
 				
 				if(line.contains("Breakpoint hit: ")){
 					line = line.trim();
-//					Logger.trace("Hit: "+line);
-					String bpInfo = line.substring(line.indexOf("Breakpoint hit: "));
-					String methodInfo = bpInfo.split(", ")[1];
-					String lineInfo = bpInfo.split(", ")[2].replace(",", "");
-					String className = methodInfo.substring(0, methodInfo.lastIndexOf("."));
-					int lineNumber = Integer.parseInt(lineInfo.substring(lineInfo.indexOf("=")+1, lineInfo.indexOf(" ")));
-					executionLog.add(className + ":" + lineNumber);
-					
-					
-					Logger.debug("Stack Peek: "+stack.peek().getSignature());
-					StaticStmt statement = findStaticStmt(stack.peek(), bpInfo);
-					if(statement == null){
-						Logger.debug("Null statement: "+bpInfo);
-					}else if(statement.endsMethod()){
-						StaticMethod poped = stack.pop();
-						Logger.trace("Pop: "+poped.getSignature());
-					}else if(statement.invokesMethod()){
-						String targetSig = (String)statement.getData();
-						Logger.trace("Invokation: "+targetSig);
-						if(targetSig != null){
-							StaticMethod targetM = staticApp.findMethod(targetSig);
-							if(targetM != null){
-								Logger.debug(targetM.getSignature());
-								StaticClass targetC = targetM.getDeclaringClass(staticApp);
-								if(targetC != null){
-									Logger.debug(targetC.getJavaName());
-									boolean inBlackList = blacklistCheck(targetM);
-									Logger.trace("inBlackList: "+inBlackList);
-									if(!inBlackList){
-										for (int i : targetM.getSourceLineNumbers()){
-											this.setBreakPointAtLine(targetC.getJavaName(), i);
+					String threadInfo = line.substring(
+							line.indexOf(": \"")+3, line.indexOf("\", "));
+					if (threadInfo.contains("main")){
+	//					Logger.trace("Hit: "+line);
+						String bpInfo = line.substring(line.indexOf("Breakpoint hit: "));
+						String methodInfo = bpInfo.split(", ")[1];
+						String lineInfo = bpInfo.split(", ")[2].replace(",", "");
+						String className = methodInfo.substring(0, methodInfo.lastIndexOf("."));
+						int lineNumber = Integer.parseInt(lineInfo.substring(lineInfo.indexOf("=")+1, lineInfo.indexOf(" ")));
+						executionLog.add(className + ":" + lineNumber);
+						
+						Logger.debug("Stack Peek: "+stack.peek().getSignature());
+						StaticStmt statement = findStaticStmt(stack.peek(), bpInfo);
+						if(statement == null){
+							Logger.debug("Null statement: "+bpInfo);
+							throw new AssertionError();
+						}else if(statement.endsMethod()){
+							StaticMethod poped = stack.pop();
+							Logger.trace("Pop: "+poped.getSignature());
+						}else if(statement.invokesMethod()){
+							String targetSig = (String)statement.getData();
+							Logger.trace("Invokation: "+targetSig);
+							if(targetSig != null){
+								StaticMethod targetM = staticApp.findMethod(targetSig);
+								
+								if(targetM != null){
+									Logger.debug(targetM.getSignature());
+									if(staticApp.methodBelongToModelDex(targetM)){
+										Logger.trace("Method is modeled");
+									}else{
+										StaticClass targetC = targetM.getDeclaringClass(staticApp);
+										if(targetC != null){
+											Logger.debug(targetC.getJavaName());
+											boolean inBlackList = blacklistCheck(targetM);
+											Logger.trace("inBlackList: "+inBlackList);
+											if(!inBlackList){
+												for (int i : targetM.getSourceLineNumbers()){
+													this.setBreakPointAtLine(targetC.getJavaName(), i);
+												}
+												stack.push(targetM);
+												Logger.trace("Push: "+stack.peek().getSignature());
+											}
+										}else{
+											Logger.debug("targetC is null");
 										}
-										stack.push(targetM);
-										Logger.trace("Push: "+stack.peek().getSignature());
 									}
 								}else{
-									Logger.debug("targetC is null");
+									Logger.debug("targetM is null");
 								}
-							}else{
-								Logger.debug("targetM is null");
 							}
+						}else{
+							Logger.trace("Normal line");
 						}
-					}else{
-						Logger.trace("Normal line");
-					}
-					
-					if(stack.isEmpty()){
-						if(methodIndex < this.previousMethods.size()){
-							stack.push(previousMethods.get(methodIndex));
-							executionLog = new ArrayList<String>();
-							result.add(executionLog);
-							methodIndex += 1;
-						}else{ 
-							Logger.trace("Stack empty and no more method root ");
-							break; 
+						
+						if(stack.isEmpty()){
+							if(methodIndex < this.previousMethods.size()){
+								stack.push(previousMethods.get(methodIndex));
+								executionLog = new ArrayList<String>();
+								result.add(executionLog);
+								methodIndex += 1;
+							}else{ 
+								Logger.trace("Stack empty and no more method root ");
+								break; 
+							}
 						}
 					}
 					
@@ -160,7 +169,6 @@ public class BreakPointReader {
 					try {  out.write("cont\n".getBytes()); out.flush();
 					} catch (IOException e) { }
 				}
-				
 				
 			}else{ //timeout for reading
 				Logger.trace("continue");
@@ -250,7 +258,7 @@ public class BreakPointReader {
 					Logger.trace("Set on "+line+" is Sucessful");
 					break;
 				}else if(reading.contains("Unable ")){
-					Logger.trace("Set on "+line+" is failure");
+					Logger.trace("Set on "+line+" is failure for "+className);
 					Logger.trace("Read: "+reading);
 					break;
 				}else if(reading.startsWith("Deferring")){
@@ -259,6 +267,7 @@ public class BreakPointReader {
 					break;
 				}else{
 					Logger.trace("Unknown result: "+reading);
+//					break;
 				}
 			}
 		} catch (IOException e) { e.printStackTrace(); }
@@ -375,7 +384,7 @@ public class BreakPointReader {
 				try { Thread.sleep(10);
 				} catch (InterruptedException e) { }
 				long currentTime = System.currentTimeMillis();
-				if(currentTime - startTime > 500){ 
+				if(currentTime - startTime > 300){ // && (new String(buf)).trim().isEmpty()
 					break; 
 				}
 			}

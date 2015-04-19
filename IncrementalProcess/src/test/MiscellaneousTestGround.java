@@ -19,7 +19,9 @@ import analysis.StaticInfo;
 public class MiscellaneousTestGround {
 
 	public static void main(String[] args) {
-		System.out.println(TimeUnit.HOURS.toMillis(1));
+		
+//		System.out.println(String.format("%1$-20s", "hello")+"asdf");
+//		System.out.println(TimeUnit.HOURS.toMillis(1));
 //		String prefix = "/home/zhenxu/workspace/APK/";
 //		String name = "TestArray.apk";
 //		StaticApp app = StaticInfo.initAnalysis(prefix + name, false);

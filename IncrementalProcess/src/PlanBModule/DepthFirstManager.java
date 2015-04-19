@@ -638,11 +638,11 @@ public class DepthFirstManager extends AbstractManager{
 			if(targetSolvingCount < 0){
 				targetSolvingCount += 1;
 				return false;
-			}else if(targetSolvingCount < this.targets.length * 3){
+			}else if(targetSolvingCount < this.targets.length){
 				targetSolvingCount += 1;
 				return true;
 			}else{
-				targetSolvingCount = -targets.length * 3;
+				targetSolvingCount = -targets.length *2;
 				return false;
 			}
 			
