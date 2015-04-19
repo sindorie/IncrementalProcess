@@ -113,7 +113,7 @@ public class BreakPointReader {
 						StaticStmt statement = findStaticStmt(stack.peek(), bpInfo);
 						if(statement == null){
 							Logger.debug("Null statement: "+bpInfo);
-							throw new AssertionError();
+//							throw new AssertionError();
 						}else if(statement.endsMethod()){
 							StaticMethod poped = stack.pop();
 							Logger.trace("Pop: "+poped.getSignature());
