@@ -261,13 +261,21 @@ public class BreakPointReader {
 					Logger.trace("Set on "+line+" is failure for "+className);
 					Logger.trace("Read: "+reading);
 					break;
-				}else if(reading.startsWith("Deferring")){
+				}else if(reading.contains("Deferring")){
 					reading = stdReader.readLine();
 					Logger.trace("Set on "+line+" is Sucessful but deffered");
 					break;
+				}else if(reading.isEmpty()){ continue;
+				
 				}else{
 					Logger.trace("Unknown result: "+reading);
-//					break;
+					try { Thread.sleep(1000); } catch (InterruptedException e) { }
+					//flush the jdb.
+					int count = this.stdin.available();
+					if(count > 0){
+						stdin.read(new byte[count]);
+					}
+					break;
 				}
 			}
 		} catch (IOException e) { e.printStackTrace(); }
