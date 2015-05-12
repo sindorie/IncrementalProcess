@@ -330,7 +330,10 @@ public class DepthFirstManager extends AbstractManager{
 
 	/**Reach target mode**/
 	@Override public void onReachTargetStart() {}
-	@Override public EventSummaryPair getNextTargetSummary() { return targetQueue.poll(); }	
+	@Override public EventSummaryPair getNextTargetSummary() { 
+		currentESPair =  targetQueue.poll(); 
+		return this.currentESPair;
+	}	
 	@Override public void onReachTargetEnd() { Logger.trace(); }
 	
 	@Override
@@ -361,7 +364,7 @@ public class DepthFirstManager extends AbstractManager{
 				valCount += 1;
 			}
 		}
-
+		
 		//An event summary might be ignored due to the incompleteness of summary list
 		//the current esPair is null iff it was an exploration operation
 		if(this.currentESPair != null){

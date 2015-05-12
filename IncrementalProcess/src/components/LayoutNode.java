@@ -54,13 +54,16 @@ public class LayoutNode extends DefaultMutableTreeNode{
 		}else if(key.equals("focused")){
 			this.focused  = Boolean.parseBoolean(val);
 		}else if(key.equals("bounds")){
+//			System.out.println(key+": "+val);
 			String[] parts = val.split("]\\[");
 			String[] subp1 = parts[0].replace("[", "").split(",");
+			String[] subp2 = parts[1].replace("]", "").split(",");
 			this.startx = Integer.parseInt(subp1[0]);
 			this.starty = Integer.parseInt(subp1[1]);
-			String[] subp2 = parts[1].replace("]", "").split(",");
+			
 			this.endx = Integer.parseInt(subp2[0]);
 			this.endy = Integer.parseInt(subp2[1]);
+//			System.out.println(startx+","+starty+" -> "+endx+","+endy+": "+(startx+endx)/2+","+(starty+endy)/2);
 		}else if(key.equals("class")){
 			this.className = val;
 		}else if(key.equals("scrollable")){
@@ -150,7 +153,7 @@ public class LayoutNode extends DefaultMutableTreeNode{
 				if(input.className != null) return false;
 			}else{
 				if(!this.className.equals(input.className)){
-					System.out.println("Difference ClassName:"+this.className+":"+input.className+";");
+//					System.out.println("Difference ClassName:"+this.className+":"+input.className+";");
 					return false;
 				}
 			}

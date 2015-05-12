@@ -2,6 +2,7 @@ package components;
 
 import java.util.Arrays;
 
+import android.view.KeyEvent;
 import support.CommandLine;
 import support.Logger;
 
@@ -10,6 +11,7 @@ public class Executer {
 	private EventDeposit deposit;
 	private boolean recordEvent = true;
 	private double[] corrdinatesRatio;
+	private boolean noReinstall = false;
 	
 	public Executer(String serial){
 		this(serial,null);
@@ -22,6 +24,10 @@ public class Executer {
 
 	public void applyEvent(Event event){
 		this.applyEvent(event, true);
+	}
+	
+	public void setForceNotReinstall(boolean noReinstall){
+		this.noReinstall = noReinstall;
 	}
 	
 	public void applyEvent(Event event, boolean sleep){ 
@@ -41,17 +47,27 @@ public class Executer {
 		case EventFactory.iREINSTALL:{
 			String packageName = (String) event.getAttribute(EventFactory.pkgName);
 			String path = (String)event.getAttribute(EventFactory.pkgPath);
-			//clear the data first 
-			CommandLine.executeADBCommand("shell pm clear "+packageName, serial);
-			Logger.trace(CommandLine.getLatestStdoutMessage());
-			Logger.trace(CommandLine.getLatestStdoutMessage());
-			CommandLine.executeADBCommand("uninstall "+packageName, serial);
-			Logger.trace(CommandLine.getLatestStdoutMessage());
-			Logger.trace(CommandLine.getLatestStdoutMessage());
-			String installCommand = "install "+ path;
-			CommandLine.executeADBCommand(installCommand, serial);
-			Logger.trace(CommandLine.getLatestStdoutMessage());
-			Logger.trace(CommandLine.getLatestStdoutMessage());
+			if(noReinstall){
+				CommandLine.executeADBCommand("shell pm clear "+packageName, serial);
+				Logger.trace(CommandLine.getLatestStdoutMessage());
+				Logger.trace(CommandLine.getLatestStdoutMessage());
+				CommandLine.executeADBCommand("shell am force-stop "+packageName, serial);
+				Logger.trace(CommandLine.getLatestStdoutMessage());
+				Logger.trace(CommandLine.getLatestStdoutMessage());
+//				CommandLine.executeADBCommand(" input keyevent "+KeyEvent.KEYCODE_HO1ME , serial);
+			}else{
+				//clear the data first 
+				CommandLine.executeADBCommand("shell pm clear "+packageName, serial);
+				Logger.trace(CommandLine.getLatestStdoutMessage());
+				Logger.trace(CommandLine.getLatestStdoutMessage());
+				CommandLine.executeADBCommand("uninstall "+packageName, serial);
+				Logger.trace(CommandLine.getLatestStdoutMessage());
+				Logger.trace(CommandLine.getLatestStdoutMessage());
+				String installCommand = "install "+ path;
+				CommandLine.executeADBCommand(installCommand, serial);
+				Logger.trace(CommandLine.getLatestStdoutMessage());
+				Logger.trace(CommandLine.getLatestStdoutMessage());
+			}
 			if(deposit != null){ deposit.hasReinstalled(); }
 		}break;
 		case EventFactory.iPRESS:{

@@ -165,15 +165,9 @@ public class AnchorSolver {
 			}
 		}
 		
-		
-		
 		for(EventSummaryPair esPair : esList){
-			Logger.trace(esPair.getEvent());
-			Logger.trace(esPair.getEvent().getSource());
-			Logger.trace(esPair.getCombinedConstraint());
-			Logger.trace(esPair.getCombinedSymbolic());
+			Logger.trace(esPair);
 			if(debug)CommandLine.requestInput();
-			
 			Set<Expression> updated = isRelatedAndSatisfiable(cumulativeConstraint , esPair);
 			if(updated != null){
 				InternalEventPair toAdd = new InternalEventPair(esPair, updated);
@@ -333,29 +327,37 @@ public class AnchorSolver {
 	 */
 	private List<DefaultMutableTreeNode> flate(List<List<DefaultMutableTreeNode>> candidatePacks){
 		List<DefaultMutableTreeNode> result = new ArrayList<DefaultMutableTreeNode>();
-		if(candidatePacks.size() <= 0){
-			return result;
+//		if(candidatePacks.size() <= 0){
+//			return result;
+//		}
+//		
+//		int total = 0;
+//		for(List<DefaultMutableTreeNode> list : candidatePacks){
+//			total += list.size();
+//		}
+//		int min = Math.min(total, maxBandwith);
+//		
+//		int[] localIndexRecord = new int[candidatePacks.size()];
+//		for(int i = 0;i<localIndexRecord.length;i++){localIndexRecord[i] = 0; }
+//		for(int count = 0, round = 0; count < min ;count++){
+//			int localIndex = localIndexRecord[round];
+//			List<DefaultMutableTreeNode> nodeList = candidatePacks.get(round);
+//			if(localIndex < nodeList.size()){
+//				DefaultMutableTreeNode node = candidatePacks.get(round).get(localIndexRecord[round]);
+//				result.add(node);
+//				localIndexRecord[round] += 1;
+//			}else{
+//				round += 1;
+//				round %= candidatePacks.size();
+//			}
+//		}
+		
+		for(List<DefaultMutableTreeNode> list: candidatePacks){
+			result.addAll(list);
 		}
 		
-		int total = 0;
-		for(List<DefaultMutableTreeNode> list : candidatePacks){
-			total += list.size();
-		}
-		int min = Math.min(total, maxBandwith);
-		
-		int[] localIndexRecord = new int[candidatePacks.size()];
-		for(int i = 0;i<localIndexRecord.length;i++){localIndexRecord[i] = 0; }
-		for(int count = 0, round = 0; count < min ;count++){
-			int localIndex = localIndexRecord[round];
-			List<DefaultMutableTreeNode> nodeList = candidatePacks.get(round);
-			if(localIndex < nodeList.size()){
-				DefaultMutableTreeNode node = candidatePacks.get(round).get(localIndexRecord[round]);
-				result.add(node);
-				localIndexRecord[round] += 1;
-			}else{
-				round += 1;
-				round %= candidatePacks.size();
-			}
+		if(result.size() >= this.maxBandwith){
+			result = result.subList(0, maxBandwith);
 		}
 		
 		return result;
@@ -381,7 +383,18 @@ public class AnchorSolver {
 		boolean isFailed = false;
 		
 		public String toString(){
-			return esPair.toString();
+			StringBuilder sb = new StringBuilder();
+			sb.append("<html>");
+			sb.append(esPair.toString());
+			if(cumulativeConstraints != null){
+				for(Expression expre : cumulativeConstraints){
+					sb.append("<br>").append(expre.toYicesStatement());
+				}
+			}
+			sb.append("</html>");
+			return sb.toString();
+			
+//			return esPair.toString();
 		}
 	}
 	

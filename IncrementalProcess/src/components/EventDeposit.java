@@ -1,8 +1,15 @@
 package components;
 
+import java.awt.GridLayout;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.swing.DefaultListModel;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 
 import support.Logger;
 
@@ -11,14 +18,27 @@ public class EventDeposit implements Serializable{
 	List<InternalPair> currentSequence = null;
 //	final Object simpleLock = new Object();
 	
+	JLabel currentLabel = null;
+	JPanel pane;
+	public EventDeposit(){
+		JScrollPane jsp = new JScrollPane();
+		pane = new JPanel();
+		pane.setLayout(new GridLayout(0,1));
+		jsp.setViewportView(pane);
+		Logger.registerJPanel("EventDeposit", jsp);
+	}
+	
+	
 	public void hasReinstalled(){ 
 		Logger.trace();
 		currentSequence = null;
+		currentLabel = null;
 	}
 	
 	public void addEvent(Event e){
 		if(e.ignoreByRecorder) return;
 		addEvent(e,null);
+		currentLabel.setText(currentLabel.getText()+", "+e.toString());
 	}
 	
 	public void addEvent(Event e, EventSummaryPair esPair){
@@ -27,6 +47,8 @@ public class EventDeposit implements Serializable{
 			if(currentSequence == null){
 				currentSequence = new ArrayList<InternalPair>();
 				records.add(currentSequence);
+				currentLabel = new JLabel();
+				pane.add(currentLabel);
 			}
 			InternalPair ip = new InternalPair(e,esPair);
 			currentSequence.add(ip);

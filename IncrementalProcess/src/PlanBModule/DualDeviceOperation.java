@@ -80,6 +80,7 @@ public class DualDeviceOperation extends AbstractOperation {
 	private Event closeKeyboardEvent; 						//predefined event
 	private LinesSummaryMatcher matcher;					//matcher between line numbers
 	private long closeKeyboardSleep = 1000;
+	private boolean noReinstall = true;
 	
 	/**
 	 * @param app -- the application under investigation
@@ -187,7 +188,10 @@ public class DualDeviceOperation extends AbstractOperation {
 
 	@Override
 	public void onExpansionProcess(EventSummaryPair toValidate) {
-		if(toValidate.isConcreateExecuted()) return;
+		if(toValidate.isConcreateExecuted()){
+			Logger.trace("Is concrete executed");
+			return;
+		}
 		if(!this.eventSummaryDeposit.contains(toValidate)){
 			Logger.trace(toValidate.toString());
 			throw new AssertionError();
@@ -195,7 +199,13 @@ public class DualDeviceOperation extends AbstractOperation {
 		
 		Logger.debug(toValidate.toString());
 		List<Event> sequence = this.model.solveForEvent(toValidate);
-		if (sequence == null){ toValidate.increaseTryCount(); return; } // fail to solve
+		
+		Logger.trace("Validation sequence for "+toValidate+": "+sequence);
+		if (sequence == null){ 
+			toValidate.increaseTryCount(); return;
+		}
+		
+		// fail to solve
 		
 		reinstallApplication();
 		WindowOverview winOverview = null;
@@ -221,30 +231,48 @@ public class DualDeviceOperation extends AbstractOperation {
 		
 		
 		boolean successful = validationComparionUnderLinearPolicy(result, toValidate);
+		EventSummaryPair actualOne = eventSummaryDeposit.findOrConstruct(result.esPair);
 		if(successful){
-			EventSummaryPair actualOne = eventSummaryDeposit.findOrConstruct(result.esPair);
 			if(actualOne != toValidate){
 				toValidate.increaseTryCount();
 				toValidate.setIgnored();
 			}
-			actualOne.increaseTryCount();
-			if(actualOne.isConcreateExecuted() == false){
-				actualOne.setConcreateExecuted();
-				this.model.update(actualOne, result.resultedLayout);
-			}
-			this.lastExecutedEvent = actualOne;
-			this.currentLayout = lastExecutedEvent.getEvent().getDest();
-		}else{
-			toValidate.increaseTryCount();
-			EventSummaryPair actualOne = eventSummaryDeposit.findOrConstruct(result.esPair);
-			actualOne.increaseTryCount();
-			if(actualOne.isConcreateExecuted() == false){
-				actualOne.setConcreateExecuted();
-				this.model.update(actualOne, result.resultedLayout);
-			}
-			this.lastExecutedEvent = actualOne;
-			this.currentLayout = lastExecutedEvent.getEvent().getDest();	
+		}else{ toValidate.increaseTryCount();  }
+		
+		actualOne.increaseTryCount();
+		if(actualOne.isConcreateExecuted() == false){
+			actualOne.setConcreateExecuted();
+			this.model.update(actualOne, result.resultedLayout);
 		}
+		this.lastExecutedEvent = actualOne;
+		this.currentLayout = lastExecutedEvent.getEvent().getDest();
+		
+		Logger.trace(actualOne.toString()+" validation: "+successful);
+		
+//		if(successful){
+//			EventSummaryPair actualOne = eventSummaryDeposit.findOrConstruct(result.esPair);
+//			if(actualOne != toValidate){
+//				toValidate.increaseTryCount();
+//				toValidate.setIgnored();
+//			}
+//			actualOne.increaseTryCount();
+//			if(actualOne.isConcreateExecuted() == false){
+//				actualOne.setConcreateExecuted();
+//				this.model.update(actualOne, result.resultedLayout);
+//			}
+//			this.lastExecutedEvent = actualOne;
+//			this.currentLayout = lastExecutedEvent.getEvent().getDest();
+//		}else{
+//			toValidate.increaseTryCount();
+//			EventSummaryPair actualOne = eventSummaryDeposit.findOrConstruct(result.esPair);
+//			actualOne.increaseTryCount();
+//			if(actualOne.isConcreateExecuted() == false){
+//				actualOne.setConcreateExecuted();
+//				this.model.update(actualOne, result.resultedLayout);
+//			}
+//			this.lastExecutedEvent = actualOne;
+//			this.currentLayout = lastExecutedEvent.getEvent().getDest();	
+//		}
 		
 		
 		
@@ -432,6 +460,12 @@ public class DualDeviceOperation extends AbstractOperation {
 	}
 	public EventSummaryDeposit getESDeposit(){
 		return this.eventSummaryDeposit;
+	}
+	
+	public void forceNoReinstall(boolean noReinstall){
+		this.noReinstall = noReinstall;
+		jdbDeviceExecuter.setForceNotReinstall(noReinstall);
+		viewDeviceExecuter.setForceNotReinstall(noReinstall);
 	}
 	
 	/*Help method Section*/

@@ -1,5 +1,6 @@
 package PlanBModule;
 
+import java.awt.BorderLayout;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -10,8 +11,10 @@ import java.util.Set;
 import javax.swing.DefaultListModel;
 import javax.swing.JLabel;
 import javax.swing.JList;
+import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
+import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.JTree;
 import javax.swing.ListSelectionModel;
@@ -60,6 +63,8 @@ public class UIModel{
 	private GraphicalLayout root;
 	private List<EventSummaryPair> edgesReference = new ArrayList<EventSummaryPair>();
 	private Map<String, SequenceStatus> solvedSummaryRecord = new HashMap<String, SequenceStatus>();
+	private Map<String, JTextArea> sequenceSummary;
+	
 	private int LAYOUT_MAX_AMOUNT = 25;
 	private int maxDepth = 10, maxBandWith = 10;
 	
@@ -67,103 +72,141 @@ public class UIModel{
 		graph = new ListenableDirectedGraph<GraphicalLayout, EventSummaryPair>(EventSummaryPair.class);
 
 		if(enableGUI){
-			adapter = new JGraphModelAdapter<GraphicalLayout, EventSummaryPair>(graph);
-			jgraph = new JGraph(adapter);
-			jgraph.setEditable(false);
-			
-			final JTree tree = new JTree();
-			final JTextArea detailPanel = new JTextArea();
-			final JScrollPane detailContainer = new JScrollPane();
-			final JScrollPane treeDetailContainer = new JScrollPane();
-			final JScrollPane leftGraphContainer = new JScrollPane();
-			final DefaultTreeModel treeModel = new DefaultTreeModel(null);
-			final JSplitPane rightSpliter = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
-			final JSplitPane masterSpliter = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
-			
-			tree.setModel(treeModel);
-			detailPanel.setEditable(false);
-			detailContainer.setViewportView(detailPanel);
-			leftGraphContainer.setViewportView(jgraph);
-			treeDetailContainer.setViewportView(tree);
-			rightSpliter.setTopComponent(treeDetailContainer);
-			rightSpliter.setBottomComponent(detailContainer);
-			
-			masterSpliter.setRightComponent(rightSpliter);
-			masterSpliter.setLeftComponent(leftGraphContainer);
-			masterSpliter.setDividerLocation(800);
-			masterSpliter.setDividerSize(3);
-			
-			jgraph.addGraphSelectionListener(new GraphSelectionListener(){
-				@Override
-				public void valueChanged(GraphSelectionEvent event) {
-					Object eventCell = event.getCell();
-					if(eventCell instanceof DefaultGraphCell){
-						Object content = ((DefaultGraphCell) eventCell).getUserObject();
-						if(content instanceof DefaultEdge){
-							EventSummaryPair edge = (EventSummaryPair)content;
-							detailPanel.setText(edge.toFormatedString());
-						}else if(content instanceof GraphicalLayout){
-							GraphicalLayout layout = (GraphicalLayout)content;
-							treeModel.setRoot(layout.getRootNode()); 
-						}else {
-							Logger.trace("unkown content: "+content.getClass());
+			{	//model display initialization
+				adapter = new JGraphModelAdapter<GraphicalLayout, EventSummaryPair>(graph);
+				jgraph = new JGraph(adapter);
+				jgraph.setEditable(false);
+				
+				final JTree layoutTree = new JTree();
+				final JTextArea detailPanel = new JTextArea();
+				final JScrollPane detailContainer = new JScrollPane();
+//				final JScrollPane uiEdgeListContainer = new JScrollPane();
+				final JScrollPane leftGraphContainer = new JScrollPane();
+				final JScrollPane treeDetailContainer = new JScrollPane();
+				final DefaultTreeModel treeModel = new DefaultTreeModel(null);
+//				final JList<EventSummaryPair> uiEdgeList = new JList<EventSummaryPair>();
+				final JSplitPane rightSpliter = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+//				final JSplitPane leftSpliter = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+				final JSplitPane masterSpliter = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+				
+				layoutTree.setModel(treeModel);
+				detailPanel.setEditable(false);
+				leftGraphContainer.setViewportView(jgraph);
+				detailContainer.setViewportView(detailPanel);
+//				uiEdgeListContainer.setViewportView(uiEdgeList);
+				treeDetailContainer.setViewportView(layoutTree);
+				
+				rightSpliter.setBottomComponent(detailContainer);
+				rightSpliter.setTopComponent(treeDetailContainer);
+				
+//				leftSpliter.setLeftComponent(uiEdgeListContainer);
+//				leftSpliter.setRightComponent(leftGraphContainer);
+				
+//				leftSpliter.setDividerLocation(150);
+//				leftSpliter.setDividerSize(3);
+				
+				masterSpliter.setRightComponent(rightSpliter);
+//				masterSpliter.setLeftComponent(leftSpliter);
+				masterSpliter.setLeftComponent(leftGraphContainer);
+				masterSpliter.setDividerLocation(800);
+				masterSpliter.setDividerSize(3);
+				
+				jgraph.addGraphSelectionListener(new GraphSelectionListener(){
+					@Override
+					public void valueChanged(GraphSelectionEvent event) {
+						Object eventCell = event.getCell();
+						if(eventCell instanceof DefaultGraphCell){
+							Object content = ((DefaultGraphCell) eventCell).getUserObject();
+							if(content instanceof DefaultEdge){
+								EventSummaryPair edge = (EventSummaryPair)content;
+								detailPanel.setText(edge.toFormatedString());
+							}else if(content instanceof GraphicalLayout){
+								GraphicalLayout layout = (GraphicalLayout)content;
+								treeModel.setRoot(layout.getRootNode()); 
+							}else {
+								Logger.trace("unkown content: "+content.getClass());
+							}
+						}else{
+							Logger.trace("unkown class: "+eventCell.getClass());
 						}
-					}else{
-						Logger.trace("unkown class: "+eventCell.getClass());
 					}
-				}
-			});
+				});
+				
+				layoutTree.addTreeSelectionListener(new TreeSelectionListener(){ 
+					@Override
+					public void valueChanged(TreeSelectionEvent e) {
+						TreePath path = e.getPath();
+						LayoutNode node = (LayoutNode) path.getLastPathComponent();
+						detailPanel.setText(node.toFormatedString());
+					} 
+				});
+				
+				Logger.registerJPanel("UI model", masterSpliter);
+			}
 			
-			tree.addTreeSelectionListener(new TreeSelectionListener(){ 
-				@Override
-				public void valueChanged(TreeSelectionEvent e) {
-					TreePath path = e.getPath();
-					LayoutNode node = (LayoutNode) path.getLastPathComponent();
-					detailPanel.setText(node.toFormatedString());
-				} 
-			});
+			/* Block splitter */
 			
-			Logger.registerJPanel("UI model", masterSpliter);
-			
-			JSplitPane topEdgePane = new JSplitPane();
-			JList<EventSummaryPair> edgeList = new JList<EventSummaryPair>();
-			JTextArea edgeDetail = new JTextArea();
+			{
+				JSplitPane topEdgePane = new JSplitPane();
+				JList<EventSummaryPair> edgeList = new JList<EventSummaryPair>();
+				JTextArea edgeDetail = new JTextArea();
 
-			DefaultListModel<EventSummaryPair> listModel = new DefaultListModel<EventSummaryPair>();
-			edgeList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-			edgeList.setModel(listModel);
-			edgeList.addListSelectionListener(new ListSelectionListener(){
-				private EventSummaryPair previous = null;
-				@Override
-				public void valueChanged(ListSelectionEvent e) {
-					EventSummaryPair current = edgeList.getSelectedValue();
-					if(current != previous){
-						if(current!=null){
-							edgeDetail.setText(current.toFormatedString());
+				DefaultListModel<EventSummaryPair> listModel = new DefaultListModel<EventSummaryPair>();
+				edgeList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+				edgeList.setModel(listModel);
+				edgeList.addListSelectionListener(new ListSelectionListener(){
+					private EventSummaryPair previous = null;
+					@Override
+					public void valueChanged(ListSelectionEvent e) {
+						EventSummaryPair current = edgeList.getSelectedValue();
+						if(current != previous){
+							if(current!=null){
+								edgeDetail.setText(current.toFormatedString());
+							}
+							previous = current;
 						}
-						previous = current;
 					}
-				}
-			});
+				});
+				
+				edgeDetail.setEditable(false);
+				
+				JScrollPane edgeListContainer = new JScrollPane();
+				edgeListContainer.setViewportView(edgeList);
+				JScrollPane edgeDetailContainer = new JScrollPane();
+				edgeDetailContainer.setViewportView(edgeDetail);
+				topEdgePane.setLeftComponent(edgeListContainer);
+				topEdgePane.setRightComponent(edgeDetailContainer);
+				
+				edgesReference = new ArrayList<EventSummaryPair>(){
+					@Override
+					public boolean add(EventSummaryPair element){
+						listModel.addElement(element);
+						return super.add(element);
+					}
+				};
+				
+				Logger.registerJPanel("edge", topEdgePane);
+			}
 			
-			edgeDetail.setEditable(false);
+			/* Block splitter */
 			
-			JScrollPane edgeListContainer = new JScrollPane();
-			edgeListContainer.setViewportView(edgeList);
-			JScrollPane edgeDetailContainer = new JScrollPane();
-			edgeDetailContainer.setViewportView(edgeDetail);
-			topEdgePane.setLeftComponent(edgeListContainer);
-			topEdgePane.setRightComponent(edgeDetailContainer);
-			
-			Logger.registerJPanel("edge", topEdgePane);
-			
-			edgesReference = new ArrayList<EventSummaryPair>(){
-				@Override
-				public boolean add(EventSummaryPair element){
-					listModel.addElement(element);
-					return super.add(element);
-				}
-			};
+			{	//Generated Sequence display initialization
+				sequenceSummary = new HashMap<String, JTextArea>();
+				JTabbedPane sequencePane = new JTabbedPane();
+				solvedSummaryRecord = new HashMap<String, SequenceStatus>(){
+					@Override
+					public SequenceStatus put(String tab, SequenceStatus status ){
+						JScrollPane con = new JScrollPane();
+						JTextArea sequenceArea = new JTextArea();
+						con.setViewportView(sequenceArea);
+						sequenceSummary.put(tab, sequenceArea);
+						
+						sequencePane.add(tab, con);
+						return super.put(tab, status);
+					}
+				};
+				Logger.registerJPanel("Sequences", sequencePane);
+			}
 		}
 	}
 	
@@ -225,6 +268,7 @@ public class UIModel{
 		String key = edge.getIdentityString();
 		SequenceStatus list = solvedSummaryRecord.get(key);
 		if(list == null){
+			Logger.trace("Generating (new) for "+edge);
 			AnchorSolver aSolver = new AnchorSolver(this,maxDepth,maxBandWith);
 			aSolver.solve(edge);
 			List<List<Event>> eSeq = aSolver.getResult();
@@ -232,12 +276,25 @@ public class UIModel{
 			list = new SequenceStatus(eSeq, this);
 			solvedSummaryRecord.put(key, list);
 		}else if(list.needUpdate(this)){
+			Logger.trace("Updating");
 			AnchorSolver aSolver = new AnchorSolver(this,maxDepth,maxBandWith);
 			aSolver.solve(edge);
 			List<List<Event>> eSeq = aSolver.getResult();
 			list.update(eSeq, this);
+		}else{
+			Logger.trace("No update");
 		}
-		return list.getNext();
+		Logger.trace("Current remaining: "+list.remainingSize());
+		List<Event> events = list.getNext();
+		if(sequenceSummary != null){
+			JTextArea area = sequenceSummary.get(key);
+			StringBuilder sb = new StringBuilder();
+			for(List<Event> eList: list.sequences){
+				sb.append(eList.toString()+"\n");
+			}
+			area.setText(sb.toString());
+		}
+		return events;
 	}
 	
 	public ListenableDirectedGraph<GraphicalLayout, EventSummaryPair> getGraph(){
@@ -258,6 +315,7 @@ public class UIModel{
 			edge.getEvent().setDest(resultedLayout);
 		}
 		edgesReference.add(edge);
+		Logger.trace("Update edges: "+edge.toString());
 	}
 	
 	public List<Event> getAdditionalEvent(){
@@ -464,7 +522,8 @@ public class UIModel{
 		public boolean needUpdate(UIModel model){
 			int currentVertexAmount = model.getGraph().vertexSet().size();
 			int currentEdgeAmount = model.edgesReference.size();
-			boolean result =  currentVertexAmount != lastRecordVertexAmount || currentEdgeAmount != lastRecordEdgeAmount;
+			boolean result =  ((currentVertexAmount != lastRecordVertexAmount) || (currentEdgeAmount != lastRecordEdgeAmount));
+			Logger.trace(result);
 			return result;
 		}
 		
@@ -481,11 +540,22 @@ public class UIModel{
 		}
 		
 		public List<Event> getNext(){
+			Logger.trace("getting from remaining: "+this.remainingSize());
 			if(sequences == null || sequences.isEmpty()) return null;
 			List<Event> result = sequences.remove(0);
 			triedSequence.add(result);
 			return result;
 		}
+		
+		public int remainingSize(){
+			return sequences == null?0:sequences.size();
+		}
 	}
 
+	
+	public static class EventGenerater{
+		UIModel model;
+		public EventGenerater(){model = null;}
+		public EventGenerater(UIModel model){this.model = model;}
+	}
 }

@@ -272,9 +272,7 @@ public class BreakPointReader {
 					try { Thread.sleep(1000); } catch (InterruptedException e) { }
 					//flush the jdb.
 					int count = this.stdin.available();
-					if(count > 0){
-						stdin.read(new byte[count]);
-					}
+					if(count > 0){ stdin.read(new byte[count]); }
 					break;
 				}
 			}
