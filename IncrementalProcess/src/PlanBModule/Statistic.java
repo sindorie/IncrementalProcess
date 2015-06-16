@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import javax.swing.DefaultListModel;
@@ -28,6 +29,7 @@ import symbolic.Blacklist;
 import symbolic.Expression;
 import symbolic.PathSummary;
 import tools.CoverageStats;
+import components.EventDeposit;
 import components.EventDeposit.InternalPair;
 import components.EventSummaryPair;
 import components.ExpressionTranfomator;
@@ -35,7 +37,7 @@ import components.WrappedSummary;
 
 public class Statistic {
 
-	//does not include UIModel now
+	// does not include UIModel now
 	public static void probe(DualDeviceOperation operater, DepthFirstManager manager){
 		//all possible accessible data
 		manager.getNewEventStack();
@@ -77,7 +79,7 @@ public class Statistic {
 		}
 		
 		
-		System.out.println("-------------- Path coverage ----------");
+		System.out.println("-------------- Event Path Pair coverage ----------");
 		Map<String, List<EventSummaryPair>> eventSummaryPairs = 
 				operater.getEventSummaryDeposit().data;
 		int totalConcreteCount = 0, totalPathCount = 0;
@@ -110,7 +112,7 @@ public class Statistic {
 		
 		DefaultListModel<PathSummary> listModel = operater.getAllKnownPathSummaries();
 		int total = 0;
-		List<List<Expression>> ignoredList = new ArrayList<List<Expression>>();
+		final List<List<Expression>> ignoredList = new ArrayList<List<Expression>>();
 		Map<String, Integer> ignoredMap = new HashMap<String, Integer>();
 		for(int i = 0 ; i < listModel.getSize(); i++){
 			PathSummary sum = listModel.getElementAt(i);
@@ -144,9 +146,9 @@ public class Statistic {
 			System.out.println("[API Signature]" + entry.getKey() + "\t\t" + entry.getValue());
 		}
 		System.out.println("\n----------------- Bytecode lines hit: "+manager.getAllHitList().size());
-		JSplitPane spliter = new JSplitPane();
+		final JSplitPane spliter = new JSplitPane();
 		JScrollPane sumScroll = new JScrollPane();
-		JList<PathSummary> sumList = new JList<PathSummary>();
+		final JList<PathSummary> sumList = new JList<PathSummary>();
 		sumList.setModel(listModel);
 		sumScroll.setViewportView(sumList);
 		spliter.setLeftComponent(sumScroll);
@@ -203,6 +205,27 @@ public class Statistic {
 			}
 		}
 		
+		EventDeposit deposit = operater.getEventDeposit();
+		List<List<InternalPair>>  ilist = deposit.getRecords();
+		int maxSequenceLength = -1;
+		int maxGeneratedSequenceLength = -1;
+		for(List<InternalPair> list : ilist){
+			if(list!= null && list.size() > 0){
+				InternalPair pair = list.get(0);
+				if(pair.esp == null){ //indicates it as a generated sequence
+					if( maxGeneratedSequenceLength <= list.size()){
+						maxGeneratedSequenceLength = list.size();
+					}
+				}
+				if( maxSequenceLength <= list.size()){
+					maxSequenceLength = list.size();
+				}
+			}
+		}
+
+		Map<String, String> targetMap = manager.getTargetReachDetail();
+		
+		
 		Set<String> lineHits = manager.getAllHitList();
 		Set<String> allLine = getAllLine(manager.app);
 		Set<String>[] checked = checkLineHit(allLine, lineHits);
@@ -212,43 +235,51 @@ public class Statistic {
 		System.out.println("Found in App: "+ checked[0].size());
 		System.out.println("Error recorded: "+checked[1].size());
 		System.out.println("Total Lines: "+allLine.size());
+		System.out.println("Max sequence length: "+maxSequenceLength);
+		System.out.println("Max generated sequence length: "+maxGeneratedSequenceLength);
 		
-		if(checked[1].size() >0){
-			for(String line : checked[1]){
-				System.out.println(line);
+		if(targetMap.size() > 0){
+			for(Entry<String, String> entry : targetMap.entrySet()){
+				System.out.println("Target: "+entry.getKey());
+				String val = entry.getValue();
+				if(val == null || val.equals("")){
+					System.out.println("Failure");
+				}else{
+					System.out.println(entry.getValue());
+				}
 			}
 		}
 		
-//		System.out.println("--------");
-//		if(allLine.size() >0){
-//			for(String line : allLine){
+//		if(checked[1].size() >0){
+//			for(String line : checked[1]){
 //				System.out.println(line);
 //			}
 //		}
-		
 	}
-	
-	
-	public static Set<String>[] checkLineHit(Set<String> allLine, Set<String> recorded){
+
+	public static Set<String>[] checkLineHit(Set<String> allLine,
+			Set<String> recorded) {
 		Set<String> result[] = new HashSet[2];
 		result[0] = new HashSet<String>();
 		result[1] = new HashSet<String>();
-		
-		for(String line: recorded){
-			if(allLine.contains(line)){
+
+		for (String line : recorded) {
+			if (allLine.contains(line)) {
 				result[0].add(line);
-			}else{ result[1].add(line);
+			} else {
+				result[1].add(line);
 			}
 		}
 		return result;
 	}
-	
-	public static Set<String> getAllLine(StaticApp staticApp){
+
+	public static Set<String> getAllLine(StaticApp staticApp) {
 		Set<String> result = new HashSet<String>();
-		for (StaticClass c : staticApp.getClasses()){
-			if (Blacklist.classInBlackList(c.getDexName())) continue;
-			for (StaticMethod m : c.getMethods()){
-				for (int i : m.getSourceLineNumbers()){
+		for (StaticClass c : staticApp.getClasses()) {
+			if (Blacklist.classInBlackList(c.getDexName()))
+				continue;
+			for (StaticMethod m : c.getMethods()) {
+				for (int i : m.getSourceLineNumbers()) {
 					String thisLine = c.getJavaName() + ":" + i;
 					result.add(thisLine);
 				}
@@ -256,5 +287,5 @@ public class Statistic {
 		}
 		return result;
 	}
-	
+
 }

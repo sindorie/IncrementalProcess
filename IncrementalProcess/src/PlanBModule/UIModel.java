@@ -148,10 +148,10 @@ public class UIModel{
 			
 			{
 				JSplitPane topEdgePane = new JSplitPane();
-				JList<EventSummaryPair> edgeList = new JList<EventSummaryPair>();
-				JTextArea edgeDetail = new JTextArea();
+				final JList<EventSummaryPair> edgeList = new JList<EventSummaryPair>();
+				final JTextArea edgeDetail = new JTextArea();
 
-				DefaultListModel<EventSummaryPair> listModel = new DefaultListModel<EventSummaryPair>();
+				final DefaultListModel<EventSummaryPair> listModel = new DefaultListModel<EventSummaryPair>();
 				edgeList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 				edgeList.setModel(listModel);
 				edgeList.addListSelectionListener(new ListSelectionListener(){
@@ -192,7 +192,7 @@ public class UIModel{
 			
 			{	//Generated Sequence display initialization
 				sequenceSummary = new HashMap<String, JTextArea>();
-				JTabbedPane sequencePane = new JTabbedPane();
+				final JTabbedPane sequencePane = new JTabbedPane();
 				solvedSummaryRecord = new HashMap<String, SequenceStatus>(){
 					@Override
 					public SequenceStatus put(String tab, SequenceStatus status ){
@@ -393,7 +393,7 @@ public class UIModel{
 	}
 	
 	@SuppressWarnings("unchecked")
-	private void onNewLayoutHelper(GraphicalLayout layout){
+	private void onNewLayoutHelper(final GraphicalLayout layout){
 		Logger.trace(layout);
 		this.graph.addVertex(layout);
 		List<GraphicalLayout> layList = actLayouts.get(layout.getActName());

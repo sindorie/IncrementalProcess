@@ -85,8 +85,8 @@ public class UIUtility {
 	
 	public static JComponent createShowCaseForApk(StaticApp app, boolean enableBlackList){
 		/*Top level panel*/
-		JSplitPane topSpliter = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
-		JSplitPane leftSubSpliter = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+		final JSplitPane topSpliter = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+		final JSplitPane leftSubSpliter = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
 		JPanel detailPanel = new JPanel();
 		topSpliter.setLeftComponent(leftSubSpliter);
 		topSpliter.setRightComponent(detailPanel);
@@ -95,16 +95,16 @@ public class UIUtility {
 		SymbolicExecution se = new SymbolicExecution(app);
 		se.debug = false;
 		se.blackListOn = true;
-		Map<String, DefaultListModel<StaticMethod>> classToMethodModelMap = new HashMap<String, DefaultListModel<StaticMethod>>();
-		Map<String, JComponent> methodDetailMap = new HashMap<String, JComponent>();
+		final Map<String, DefaultListModel<StaticMethod>> classToMethodModelMap = new HashMap<String, DefaultListModel<StaticMethod>>();
+		final Map<String, JComponent> methodDetailMap = new HashMap<String, JComponent>();
 //		Map<String, JText>
 		
 		
 		/*class list and method list*/
-		JList<StaticClass> classList = new JList<StaticClass>();
-		JList<StaticMethod> methodList = new JList<StaticMethod>();
-		JScrollPane classListWrapper = new JScrollPane();
-		JScrollPane methodListWrapper = new JScrollPane();
+		final JList<StaticClass> classList = new JList<StaticClass>();
+		final JList<StaticMethod> methodList = new JList<StaticMethod>();
+		final JScrollPane classListWrapper = new JScrollPane();
+		final JScrollPane methodListWrapper = new JScrollPane();
 		classListWrapper.setViewportView(classList);
 		methodListWrapper.setViewportView(methodList);
 		leftSubSpliter.setLeftComponent(classListWrapper);

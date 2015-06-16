@@ -19,7 +19,7 @@ public class InputMethodOverview {
 	public final static String RootNodeIdentifier = "mInputEditorInfo:";
 	
 	public InputMethodOverview(){}
-	public InputMethodOverview(DefaultMutableTreeNode tree){
+	public InputMethodOverview(final DefaultMutableTreeNode tree){
 		TreeUtility.breathFristSearch(tree, new Searcher(){
 			@Override
 			public int check(TreeNode node) {

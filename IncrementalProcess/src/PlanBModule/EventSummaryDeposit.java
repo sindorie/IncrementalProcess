@@ -84,8 +84,8 @@ public class EventSummaryDeposit implements Serializable{
 			Container edgeInfoContainer = new Container();
 			edgeInfoContainer.setLayout(new BorderLayout());
 			
-			JList<EventSummaryPair> edgeList = new JList<EventSummaryPair>();
-			JTextArea edgeDetail = new JTextArea();
+			final JList<EventSummaryPair> edgeList = new JList<EventSummaryPair>();
+			final JTextArea edgeDetail = new JTextArea();
 			
 			listModel = new DefaultListModel<EventSummaryPair>();
 			edgeList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);

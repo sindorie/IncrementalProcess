@@ -22,7 +22,7 @@ public class WindowOverview {
 	 * @param tree
 	 */
 	public WindowOverview(DefaultMutableTreeNode tree){
-		List<WindowInformation> workSpace = new ArrayList<WindowInformation>();
+		final List<WindowInformation> workSpace = new ArrayList<WindowInformation>();
 		TreeUtility.breathFristSearch(tree, new Searcher(){
 			@Override
 			public int check(TreeNode node) {

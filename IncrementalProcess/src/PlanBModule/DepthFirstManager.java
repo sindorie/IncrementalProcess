@@ -162,8 +162,8 @@ public class DepthFirstManager extends AbstractManager{
 			
 			targetArea = new JTextArea();
 			validArea = new JTextArea();
-			JTextArea confirmArea = new JTextArea();
-			JTextArea ignoreArea = new JTextArea();
+			final JTextArea confirmArea = new JTextArea();
+			final JTextArea ignoreArea = new JTextArea();
 			
 			targetContainer.setViewportView(targetArea);
 			validationContainer.setViewportView(validArea);
@@ -225,7 +225,7 @@ public class DepthFirstManager extends AbstractManager{
 			Logger.registerJPanel("Queue", queuePane);
 			
 			
-			JTabbedPane lineHitPane = new JTabbedPane();
+			final JTabbedPane lineHitPane = new JTabbedPane();
 			classCatergoryPane = new HashMap<String, JTextArea>();
 			
 			lineHit = new HashSet<String>(){

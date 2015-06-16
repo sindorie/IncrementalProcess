@@ -139,7 +139,7 @@ public class Logger {
 		gFilters.remove(filter);
 	}
 	
-	public static void registerJPanel(String tag, JComponent panel){
+	public static void registerJPanel(final String tag, final JComponent panel){
 		SwingUtilities.invokeLater(new Runnable() {
             public void run() {
             	tabbedPane.add(tag, panel);

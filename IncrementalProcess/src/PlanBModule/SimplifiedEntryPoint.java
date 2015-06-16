@@ -237,7 +237,7 @@ public class SimplifiedEntryPoint {
 		Logger fileLogging = new Logger(null); 
 		File logFile = new File(parentFolderName+"/"+logFileName);
 		try {
-			PrintWriter pw = new PrintWriter(logFile);
+			final PrintWriter pw = new PrintWriter(logFile);
 			fileLogging.addLocalFilter(new InformationFilter(){
 				@Override
 				public boolean filtered(CurrentThreadInfo info, String tag,

@@ -689,7 +689,7 @@ public class DualDeviceOperation extends AbstractOperation {
 	 * @param event
 	 * @return
 	 */
-	private ExecutionResult executeAndConstruct(Event event){
+	private ExecutionResult executeAndConstruct(final Event event){
 		ExecutionResult result = new ExecutionResult();
 		
 		logcatReader.clearLogcat();
