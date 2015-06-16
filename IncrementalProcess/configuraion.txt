@@ -2,5 +2,6 @@
 <cong>
     <yices>/home/zhenxu/Tools/Solver/yices-2.2.2/bin/yices</yices>
     <adb>adb</adb>
+    <jdb>not all</jdb>
     <sample>this is a sample</sample>
 </cong>

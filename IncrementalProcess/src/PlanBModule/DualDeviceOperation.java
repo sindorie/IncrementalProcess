@@ -770,7 +770,7 @@ public class DualDeviceOperation extends AbstractOperation {
 			
 			Set<String> hitLines = new HashSet<String>();
 			for(WrappedSummary sum : mappedSummaryList){
-				if(sum.executionLog != null)
+				if(sum !=null && sum.executionLog != null)
 					hitLines.addAll(sum.executionLog);
 			}
 			this.latestLineHit = hitLines;

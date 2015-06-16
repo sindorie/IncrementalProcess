@@ -42,6 +42,8 @@ public class EventFactory {
 	}
 	
 	public static Event createClickEvent(GraphicalLayout source, LayoutNode node){
+		System.out.println(node.className+" - "+node.id+" - "+node.startx+","+node.endx+", "+node.starty+","+node.endy);
+		
 		return createClickEvent(source, (node.startx+node.endx)/2,
 				(node.starty+node.endy)/2 );
 	}

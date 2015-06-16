@@ -3,6 +3,7 @@ package support;
 import java.awt.Component;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -36,6 +37,38 @@ import symbolic.Variable;
 
 public class UIUtility {
 
+	public static void showList(List<?> list){
+		showList("list", list, JFrame.EXIT_ON_CLOSE);
+	}
+	
+	public static void showList(String name, List<?> list, int operationCode){
+		showList("list", list, null, JFrame.EXIT_ON_CLOSE);
+	}
+	
+	@SuppressWarnings({ "rawtypes", "unchecked" })
+	public static void showList(String name, List<?> list, ListSelectionListener listener, int operationCode){
+		JFrame frame = new JFrame(name);
+		JList uiList = new JList();
+		DefaultListModel lModel = new DefaultListModel();
+		Iterator<?> iter = list.iterator();
+		while(iter.hasNext()){
+			Object element = iter.next();
+			if(element == null) continue;
+			lModel.addElement(element);
+		}
+		
+		uiList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		if(listener != null ) uiList.addListSelectionListener(listener);
+		uiList.setModel(lModel);
+		JScrollPane jsp = new JScrollPane();
+		jsp.setViewportView(uiList);
+		frame.getContentPane().add(jsp);
+		frame.pack();
+		frame.setVisible(true);
+	}
+	
+	
+	
 	public static void showTree(TreeNode node){
 		showTree("tree",node,JFrame.EXIT_ON_CLOSE);
 	}
@@ -43,6 +76,7 @@ public class UIUtility {
 	public static void showTree(String name, TreeNode node, int operationCode){
 		JFrame frame = new JFrame(name);
 		JTree tree = new JTree(node);
+		TreeUtility.expandJTree(tree, -1);
 		frame.getContentPane().add(tree);
 		frame.pack();
 		frame.setVisible(true);

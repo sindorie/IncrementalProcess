@@ -4,8 +4,10 @@ import java.awt.Dimension;
 import java.awt.GridLayout;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.swing.DefaultListModel;
 import javax.swing.JLabel;
@@ -18,12 +20,18 @@ import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
+import staticFamily.StaticApp;
+import staticFamily.StaticClass;
+import staticFamily.StaticMethod;
 import support.Logger;
+import symbolic.Blacklist;
 import symbolic.Expression;
 import symbolic.PathSummary;
+import tools.CoverageStats;
 import components.EventDeposit.InternalPair;
 import components.EventSummaryPair;
 import components.ExpressionTranfomator;
+import components.WrappedSummary;
 
 public class Statistic {
 
@@ -172,5 +180,81 @@ public class Statistic {
 		Logger.registerJPanel("Ignored Constraint Expression", spliter);
 		
 		
+		System.out.println("---------------------------------------");
+		
+		
+
+		DefaultListModel<PathSummary> totalList = operater.getAllKnownPathSummaries();
+		List<PathSummary> concreteList = new ArrayList<PathSummary>();
+		Set<List<String>> executeLogSet =new HashSet<List<String>>();
+		for (Map.Entry<String, List<EventSummaryPair>> entry : eventSummaryPairs.entrySet()){
+			for(EventSummaryPair esPair : entry.getValue()){
+				if(esPair.isConcreateExecuted()){
+					System.out.println(esPair.toString()+"  :  "+esPair.getMethodRoots());
+					List<WrappedSummary> wList = esPair.getSummaryList();
+					if(wList == null || wList.size() == 0) continue;
+					for(WrappedSummary ws : wList){
+						if(ws == null || ws.executionLog ==null || ws.executionLog.isEmpty()) continue;
+						if(executeLogSet.add(ws.executionLog)){
+							concreteList.add(ws.summaryReference);
+						}
+					}
+				}
+			}
+		}
+		
+		Set<String> lineHits = manager.getAllHitList();
+		Set<String> allLine = getAllLine(manager.app);
+		Set<String>[] checked = checkLineHit(allLine, lineHits);
+		
+		System.out.println("Path Summary execution (Concrete/All): "+concreteList.size()+"/"+totalList.size());
+		System.out.println("Recorded hits: "+ lineHits.size());
+		System.out.println("Found in App: "+ checked[0].size());
+		System.out.println("Error recorded: "+checked[1].size());
+		System.out.println("Total Lines: "+allLine.size());
+		
+		if(checked[1].size() >0){
+			for(String line : checked[1]){
+				System.out.println(line);
+			}
+		}
+		
+//		System.out.println("--------");
+//		if(allLine.size() >0){
+//			for(String line : allLine){
+//				System.out.println(line);
+//			}
+//		}
+		
 	}
+	
+	
+	public static Set<String>[] checkLineHit(Set<String> allLine, Set<String> recorded){
+		Set<String> result[] = new HashSet[2];
+		result[0] = new HashSet<String>();
+		result[1] = new HashSet<String>();
+		
+		for(String line: recorded){
+			if(allLine.contains(line)){
+				result[0].add(line);
+			}else{ result[1].add(line);
+			}
+		}
+		return result;
+	}
+	
+	public static Set<String> getAllLine(StaticApp staticApp){
+		Set<String> result = new HashSet<String>();
+		for (StaticClass c : staticApp.getClasses()){
+			if (Blacklist.classInBlackList(c.getDexName())) continue;
+			for (StaticMethod m : c.getMethods()){
+				for (int i : m.getSourceLineNumbers()){
+					String thisLine = c.getJavaName() + ":" + i;
+					result.add(thisLine);
+				}
+			}
+		}
+		return result;
+	}
+	
 }

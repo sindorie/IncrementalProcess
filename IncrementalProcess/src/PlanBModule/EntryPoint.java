@@ -31,38 +31,21 @@ public class EntryPoint {
 	static boolean force = false;
 	
 	static int maxIteration = Integer.MAX_VALUE;
-	static long maxTime = TimeUnit.HOURS.toMillis(3);
-	static int maxValidationTry = 100;
+	static long maxTime = TimeUnit.MINUTES.toMillis(30);
+	static int maxValidationTry = 20;
 	
 	public static void main(String[] args) {
 		
-		String name = "/home/zhenxu/AndroidTestAPKPlayGround/APK2/net.mandaria.tippytipper.apk";
+		String name = "/home/zhenxu/AndroidTestAPKPlayGround/APK/Dragon.apk";
 		try{
 			String[] targets = {
-//					"com.example.dragon.MainActivity:119",
-//					"com.example.dragon.SecondLayout:72",
-//					"com.example.dragon.SecondLayout:84",
-//					"com.example.dragon.SecondLayout:79",
-//					"com.example.dragon.SecondLayout:90",
+
 			};
-			 startTest(name, targets);
+			startTest(name, targets);
 		 }catch(Exception e){
 			 e.printStackTrace();
 		 }
 		
-//		try{
-//			 String name = "CalcA.apk";
-//			 startTest(prefix+name, null);
-//		 }catch(Exception e){
-//			 e.printStackTrace();
-//		 }
-//		
-//		try{
-//			 String name = "info.bpace.munchlife.apk";
-//			 startTest(prefix+name, null);
-//		 }catch(Exception e){
-//			 e.printStackTrace();
-//		 }
 		
 	}
 	
@@ -118,6 +101,12 @@ public class EntryPoint {
 		int hitTotalSize = hits.size();
 		System.out.println("Hit size: "+hitTotalSize);
 		int totalMiseed = 0;
+		
+		for(Entry<String,Set<String>>  missed : clsLineMis.entrySet()){
+			System.out.println(String.join("\n", missed.getValue()));
+		}
+		
+		
 		for(Entry<String,Set<String>>  missed : clsLineMis.entrySet()){
 			totalMiseed += missed.getValue().size();
 			System.out.println(missed.getKey()+" missed line amount: "+missed.getValue().size());

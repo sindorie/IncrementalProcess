@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
+import components.system.Configuration;
 import staticFamily.StaticApp;
 import staticFamily.StaticClass;
 import staticFamily.StaticMethod;
@@ -33,6 +34,16 @@ public class BreakPointReader {
 	private InputStream stdin, stderr;
 	private List<String> breakpointsLog; 
 	private List<StaticMethod> previousMethods; 
+	private Blacklist bl = new Blacklist();
+	
+	static boolean breakPointOnAllLine = false;
+	static{
+		String val = Configuration.getValue("jdb");
+		if(val != null && val.equalsIgnoreCase("all")){
+			breakPointOnAllLine = true;
+		}
+	}
+	
 	
 	public BreakPointReader(String serial){
 		this.serial = serial;
@@ -98,26 +109,48 @@ public class BreakPointReader {
 				
 				if(line.contains("Breakpoint hit: ")){
 					line = line.trim();
-					String threadInfo = line.substring(
-							line.indexOf(": \"")+3, line.indexOf("\", "));
+//					String threadInfo = line.substring(
+//							line.indexOf(": \"")+3, line.indexOf("\", "));
+//					
+//					String bpInfo = line.substring(line.indexOf("Breakpoint hit: "));
+//					String methodInfo = bpInfo.split(", ")[1];
+//					String lineInfo = bpInfo.split(", ")[2].replace(",", "");
+//					String className = methodInfo.substring(0, methodInfo.lastIndexOf("."));
+//					int lineNumber = Integer.parseInt(lineInfo.substring(lineInfo.indexOf("=")+1, lineInfo.indexOf(" ")));
+					
+					
+					line = line.trim();
+					String[] chunks = line.split(", ");
+					String threadInfo = chunks[0].substring(chunks[0].indexOf("\""), chunks[0].lastIndexOf("\""));
+					String className = chunks[1].substring(0, chunks[1].lastIndexOf("."));
+					String lineNumber = chunks[2].substring(chunks[2].indexOf("=")+1, chunks[2].indexOf(" "));
+					System.out.println(className+"   "+lineNumber);
+					int lineInt = -1 ;
+					try{
+						lineInt = Integer.parseInt(lineNumber);
+					}catch(Exception e ){
+						
+					}
+					
+					
+					executionLog.add(className + ":" + lineNumber);
+					
 					if (threadInfo.contains("main")){
 	//					Logger.trace("Hit: "+line);
-						String bpInfo = line.substring(line.indexOf("Breakpoint hit: "));
-						String methodInfo = bpInfo.split(", ")[1];
-						String lineInfo = bpInfo.split(", ")[2].replace(",", "");
-						String className = methodInfo.substring(0, methodInfo.lastIndexOf("."));
-						int lineNumber = Integer.parseInt(lineInfo.substring(lineInfo.indexOf("=")+1, lineInfo.indexOf(" ")));
-						executionLog.add(className + ":" + lineNumber);
-						
 						Logger.debug("Stack Peek: "+stack.peek().getSignature());
-						StaticStmt statement = findStaticStmt(stack.peek(), bpInfo);
+						StaticStmt statement = null;
+						if(!stack.isEmpty() || lineInt < 0){
+							statement = stack.peek().getStmtByLineNumber(lineInt);
+						}
+//						StaticStmt statement = findStaticStmt(stack.peek(), bpInfo);
 						if(statement == null){
-							Logger.debug("Null statement: "+bpInfo);
+//							Logger.debug("Null statement: "+bpInfo);
+							Logger.debug(threadInfo+"");
 //							throw new AssertionError();
 						}else if(statement.endsMethod()){
 							StaticMethod poped = stack.pop();
 							Logger.trace("Pop: "+poped.getSignature());
-						}else if(statement.invokesMethod()){
+						}else if(statement.invokesMethod() && !breakPointOnAllLine){
 							String targetSig = (String)statement.getData();
 							Logger.trace("Invokation: "+targetSig);
 							if(targetSig != null){
@@ -203,33 +236,50 @@ public class BreakPointReader {
 	}
 	
 	private boolean blacklistCheck(StaticMethod m) {
-		Blacklist bl = new Blacklist();
+		
 		StaticClass c = m.getDeclaringClass(staticApp);
 		if (m == null || c == null)
 			return false;
-		return (bl.classInBlackList(c.getDexName()) || bl.methodInBlackList(m.getSignature()));
+		return (Blacklist.classInBlackList(c.getDexName()) || Blacklist.methodInBlackList(m.getSignature()));
 	}
 	
 	
 	private int setBreakPoints(List<String> methodRoots){
 		int count = 0;
-		Logger.trace(methodRoots);
-		List<StaticMethod> foundMethod = new ArrayList<StaticMethod>();
-		for(String method: methodRoots){
-			StaticMethod m = staticApp.findMethod(method);
-			foundMethod.add(m);
-			String className = m.getDeclaringClass(staticApp).getJavaName();
-			for (int lineNumber : m.getSourceLineNumbers()){
-				Logger.trace("setting breakpoint on "+className+", "+lineNumber);
-				if(this.setBreakPointAtLine(className, lineNumber)){
-					count += 1;
+		if(breakPointOnAllLine){
+			Logger.trace();
+			for(StaticClass cls : staticApp.getClasses()){
+				if(Blacklist.classInBlackList(cls.getDexName())){ continue; }
+				for(StaticMethod method : cls.getMethods()){
+					if(Blacklist.methodInBlackList(method.getSignature())){ continue; }
+					String className = method.getDeclaringClass(staticApp).getJavaName();
+					for (int lineNumber : method.getSourceLineNumbers()){
+						if(this.setBreakPointAtLine(className, lineNumber)){
+							count += 1;
+						}
+					}
 				}
 			}
+		}else{
+			Logger.trace(methodRoots);
+			List<StaticMethod> foundMethod = new ArrayList<StaticMethod>();
+			for(String method: methodRoots){
+				StaticMethod m = staticApp.findMethod(method);
+				foundMethod.add(m);
+				String className = m.getDeclaringClass(staticApp).getJavaName();
+				for (int lineNumber : m.getSourceLineNumbers()){
+					Logger.trace("setting breakpoint on "+className+", "+lineNumber);
+					if(this.setBreakPointAtLine(className, lineNumber)){
+						count += 1;
+					}
+				}
+			}
+			previousMethods = foundMethod;
 		}
 		Logger.trace("Total of "+count+" lines.");
-		previousMethods = foundMethod;
 		return count;
 	}
+	
 	
 	private boolean setBreakPointAtLine(String className, int line) {
 		//check if the break point was set. Return if so. 
@@ -305,7 +355,10 @@ public class BreakPointReader {
 		if(stdMes != null && !stdMes.isEmpty()){Logger.trace("Stdout: "+stdMes); }
 		
 		try {
-			process = Runtime.getRuntime().exec("jdb -sourcepath " + "src" + " -attach localhost:" + localPort);
+			String command = "jdb -sourcepath " + "src" + " -attach localhost:" + localPort;
+			Logger.trace(command);
+			
+			process = Runtime.getRuntime().exec(command);
 		} catch (IOException e) {
 			e.printStackTrace();
 			return false;
@@ -320,22 +373,22 @@ public class BreakPointReader {
 		
 		//Read until "Initializing jdb ..." show up
 		Logger.trace();
-		boolean once = false;
+//		boolean once = false;
 		long stt = System.currentTimeMillis();
 		while(true){
 			try { Thread.sleep(100);
 			} catch (InterruptedException e) { }
 			try {
 				String line = stdReader.readLine();
-				if(line == null) continue;
 				Logger.trace(line);
-				if(line.startsWith("Initializing jdb ...")) {break;}
+				if(line!= null && line.startsWith("Initializing jdb ...")) {break;}
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-			
-			if(once && System.currentTimeMillis() - stt > 1000*5){
-				once = false;
+			if(
+//					once && 
+					System.currentTimeMillis() - stt > 1000){
+//				once = false;
 				System.out.println("JDB initialization taking too long.");
 			}
 		}

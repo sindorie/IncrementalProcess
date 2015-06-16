@@ -10,6 +10,7 @@ import javax.swing.tree.MutableTreeNode;
 import javax.swing.tree.TreeNode;
 
 import components.GraphicalLayout;
+import components.LayoutNode;
 
 public class TreeUtility {
 	
@@ -185,9 +186,13 @@ public class TreeUtility {
 	
 	private static int localCount;
 	public static int countNodes(GraphicalLayout layout){
-		if(layout.getRootNode() == null) return -1;
+		return countNodes(layout.getRootNode());
+	}
+	
+	public static int countNodes(LayoutNode node){
+		if(node == null) return -1;
 		localCount = 0;
-		TreeUtility.depthFristSearch(layout.getRootNode(), new TreeUtility.Searcher() {
+		TreeUtility.depthFristSearch(node, new TreeUtility.Searcher() {
 			@Override
 			public int check(TreeNode node) {
 				localCount += 1;
