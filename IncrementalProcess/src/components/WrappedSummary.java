@@ -29,6 +29,7 @@ import javax.swing.event.ListSelectionListener;
 
 import support.Logger;
 import support.TreeUtility; 
+import support.Utility;
 import symbolic.Expression;
 import symbolic.PathSummary;
 import symbolic.Variable;
@@ -143,7 +144,7 @@ public class WrappedSummary implements Serializable {
 		
 		sb.append("Execution Log:\n");
 		sb.append("\t");
-		sb.append(String.join("\n", this.executionLog));
+		sb.append(Utility.join("\n", this.executionLog));
 		
 		sb.append("IsExecuted: ").append(isExecuted).append("\n");
 		return sb.toString();
@@ -209,7 +210,7 @@ public class WrappedSummary implements Serializable {
 						
 						rightSummaryContainer.add(new JLabel("Signature:"+sum.getMethodSignature()));					
 						
-						String toShow = String.join("\n", sum.getExecutionLog());
+						String toShow = Utility.join("\n", sum.getExecutionLog());
 						JTextArea area = new JTextArea();
 						JScrollPane areaScroll = new JScrollPane();
 						areaScroll.setSize(500, 200);
@@ -302,7 +303,7 @@ public class WrappedSummary implements Serializable {
 					
 					rightSummaryContainer.add(new JLabel("Signature:"+sum.methodSignature));					
 					
-					String toShow = String.join("\n", sum.executionLog);
+					String toShow = Utility.join("\n", sum.executionLog);
 					JTextArea area = new JTextArea();
 					JScrollPane areaScroll = new JScrollPane();
 					areaScroll.setViewportView(area);

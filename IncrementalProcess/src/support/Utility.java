@@ -6,6 +6,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 public class Utility {
@@ -82,5 +83,17 @@ public class Utility {
 			e.printStackTrace();
 		}
 		return null;
+	}
+	
+	public static String join(String joiner,List<String> collection){
+		if(collection != null && collection.size() > 0){
+			StringBuilder sb = new StringBuilder();
+			sb.append(collection.get(0));
+			for(int i = 1; i< collection.size() ; i++){
+				sb.append(joiner).append(collection.get(1));
+			}
+			return sb.toString();
+		}
+		return "";
 	}
 }
