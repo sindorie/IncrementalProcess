@@ -82,13 +82,15 @@ public class DualDeviceOperation extends AbstractOperation {
 	private long closeKeyboardSleep = 1000;
 	private boolean noReinstall = true;
 	
+	private List<List<Event>> validatedSequence = new ArrayList<List<Event>>();
+	
 	/**
 	 * @param app -- the application under investigation
 	 * @param model	-- the model which the operator works on
 	 * @param viewDeviceSerial -- the serial of device which provides the view information
 	 * @param jdbDeviceSerial -- the serial of devices which provides the path information
 	 */
-	public DualDeviceOperation(StaticApp app, UIModel model,
+ 	public DualDeviceOperation(StaticApp app, UIModel model,
 			String viewDeviceSerial, String jdbDeviceSerial) {
 		super(app, model);
 		this.viewDeviceSerial = viewDeviceSerial;
@@ -118,7 +120,7 @@ public class DualDeviceOperation extends AbstractOperation {
 	@Override
 	public void onPreparation() {
 		this.viewDeviceExecuter.enableRecordingEvent(false);
-		
+		this.jdbDeviceExecuter.enableRecordingEvent(false);
 //		this.jdbDeviceExecuter.applyEvent(EventFactory.CreatePressEvent(GraphicalLayout.Launcher,
 //				KeyEvent.KEYCODE_MENU ));
 //		this.viewDeviceExecuter.applyEvent(EventFactory.CreatePressEvent(GraphicalLayout.Launcher,
@@ -129,6 +131,7 @@ public class DualDeviceOperation extends AbstractOperation {
 		this.viewDeviceExecuter.applyEvent(EventFactory.CreatePressEvent(GraphicalLayout.Launcher,
 				KeyEvent.KEYCODE_HOME ));
 		this.viewDeviceExecuter.enableRecordingEvent(true);
+		this.jdbDeviceExecuter.enableRecordingEvent(true);
 		
 		this.reinstallApplication();
 		WindowPolicy viewDevicePolicy = this.collector_viewDevice.getWindowPolicy();
@@ -155,22 +158,7 @@ public class DualDeviceOperation extends AbstractOperation {
 			}
 		}
 		ExecutionResult actualResult = executeAndConstruct(newEvent);
-//		List<List<WrappedSummary>> premutatedList = Utility.permutate(actualResult.mappedSummaryCandidatesList);
-		
-//		System.out.println("mappedSummaryCandidatesList: "+actualResult.mappedSummaryCandidatesList);
-//		System.out.println("premutatedList: "+premutatedList);
-//		Logger.trace("Method root: "+actualResult.methodRoots);
-//		Logger.trace("Consturcting validation sequence with root amount: "+(actualResult.methodRoots==null?0:actualResult.methodRoots.size()));
-//		Logger.trace("Permutated size: "+premutatedList.size());
-//		List<Integer> sizeList = new ArrayList<Integer>();
-//		for(List<WrappedSummary> wList : actualResult.mappedSummaryCandidatesList){
-//			sizeList.add(wList.size());
-//		}
-//		Logger.trace("Candidates size for each: "+sizeList);
-		
-		
 		List<List<WrappedSummary>> linarList = linearHelper(actualResult.mappedSummaryCandidatesList);
-//		premutatedList
 		List<EventSummaryPair> validationCandidate = filterConstructAndDesposit(linarList, newEvent, actualResult.methodRoots, actualResult.esPair);
 		if(newEvent.getSource()!=GraphicalLayout.Launcher){
 			Logger.trace("Size: "+(validationCandidate==null?0:validationCandidate.size()));
@@ -194,16 +182,14 @@ public class DualDeviceOperation extends AbstractOperation {
 		}
 		if(!this.eventSummaryDeposit.contains(toValidate)){
 			Logger.trace(toValidate.toString());
+			Logger.trace(toValidate.getIdentityString());
 			throw new AssertionError();
 		}
-		
 		Logger.debug(toValidate.toString());
 		List<Event> sequence = this.model.solveForEvent(toValidate);
-		
 		Logger.trace("Validation sequence for "+toValidate+": "+sequence);
-		if (sequence == null){ 
-			toValidate.increaseTryCount(); return;
-		}
+		if (sequence == null){ toValidate.increaseTryCount(); return; }
+		validatedSequence.add(sequence);
 		
 		// fail to solve
 		
@@ -248,130 +234,6 @@ public class DualDeviceOperation extends AbstractOperation {
 		this.currentLayout = lastExecutedEvent.getEvent().getDest();
 		
 		Logger.trace(actualOne.toString()+" validation: "+successful);
-		
-//		if(successful){
-//			EventSummaryPair actualOne = eventSummaryDeposit.findOrConstruct(result.esPair);
-//			if(actualOne != toValidate){
-//				toValidate.increaseTryCount();
-//				toValidate.setIgnored();
-//			}
-//			actualOne.increaseTryCount();
-//			if(actualOne.isConcreateExecuted() == false){
-//				actualOne.setConcreateExecuted();
-//				this.model.update(actualOne, result.resultedLayout);
-//			}
-//			this.lastExecutedEvent = actualOne;
-//			this.currentLayout = lastExecutedEvent.getEvent().getDest();
-//		}else{
-//			toValidate.increaseTryCount();
-//			EventSummaryPair actualOne = eventSummaryDeposit.findOrConstruct(result.esPair);
-//			actualOne.increaseTryCount();
-//			if(actualOne.isConcreateExecuted() == false){
-//				actualOne.setConcreateExecuted();
-//				this.model.update(actualOne, result.resultedLayout);
-//			}
-//			this.lastExecutedEvent = actualOne;
-//			this.currentLayout = lastExecutedEvent.getEvent().getDest();	
-//		}
-		
-		
-		
-		
-		/*
-		 * Compare the resulted summary with the one to validate
-		 * Those two are considered equal if exactly the same summaries. 
-		 * 
-		 * If the actual execution log contains the log in the input summary,
-		 * then the input summary is discard. 
-		 * 
-		 * Failure in other cases?
-		 * 
-		 * Generate new validation summary the method root contains unexpected one.
-		 * 
-		 * 
-		 * Same, Mixed, contain
-		 * 
-		 * Note: Assuming only the last few method of the actual execution could ever be missing
-		 */
-//		boolean knownBranchFullyMatches = true;
-//		if( result.methodRoots.size() < toValidate.getMethodRoots().size() ){
-//			knownBranchFullyMatches = false;
-//		}else{
-//			for(int i =0;i<toValidate.getMethodRoots().size(); i++){
-//				WrappedSummary sum1= toValidate.getSummaryList().get(i);
-//				WrappedSummary sum2 = result.esPair.getSummaryList().get(i);
-//				//check perfect match for the first few
-//				if(sum1 == null){ if(sum2 != null){ knownBranchFullyMatches = false; break; }
-//				}else{ if(!sum1.equals(sum2)){ knownBranchFullyMatches = false; break; }}
-//			}
-//		}
-//		Logger.trace("knownBranchFullyMatches: "+knownBranchFullyMatches);
-//		if(knownBranchFullyMatches){
-//			if(result.methodRoots.size() == toValidate.getMethodRoots().size()){
-//				Logger.trace("Perfect match");
-//				//perfect match
-//				toValidate.setConcreateExecuted();
-//				toValidate.increaseTryCount();
-//				this.model.update(toValidate, result.resultedLayout);
-//				this.lastExecutedEvent = toValidate;				
-//				this.currentLayout = lastExecutedEvent.getEvent().getDest();
-//			}else{
-//				Logger.trace("Partial match");
-//				//there is missing summaries
-//				if(this.eventSummaryDeposit.contains(result.esPair)){
-//					//check if the deposit contains it.
-//					//does not expect this
-//					toValidate.increaseTryCount();
-//					EventSummaryPair actualOne = eventSummaryDeposit.checkAndDeposit(result.esPair);
-//					actualOne.increaseTryCount();
-//					if(actualOne.isConcreateExecuted() == false){
-//						this.model.update(actualOne, result.resultedLayout);
-//						actualOne.setConcreateExecuted();
-//					}
-//					this.lastExecutedEvent = actualOne;
-//					this.currentLayout = lastExecutedEvent.getEvent().getDest();
-//				}else{//this is new as the deposit does not contain it
-//					//update first
-//					toValidate.increaseTryCount();
-//					toValidate.setIgnored();
-//					eventSummaryDeposit.deposit(result.esPair);
-//					result.esPair.increaseTryCount();
-//					model.update(result.esPair, result.resultedLayout);
-//					result.esPair.setConcreateExecuted();
-//					this.lastExecutedEvent = result.esPair;
-//					this.currentLayout = lastExecutedEvent.getEvent().getDest();
-//					
-//					//create more symbolic
-//					List<String> remain = result.methodRoots.subList(toValidate.getMethodRoots().size(), result.methodRoots.size());
-//					//create new symbolic summary
-//					List<List<WrappedSummary>> listCandidates = this.findSummaryCandidates(remain);
-//					List<List<WrappedSummary>> partialPermutation = Utility.permutate(listCandidates);
-//					List<EventSummaryPair> permutatedList = new ArrayList<EventSummaryPair>();
-//					Set<EventSummaryPair> set = this.eventSummaryDeposit.getSet(toValidate.getEvent());
-//					for(int i =0; i< permutatedList.size(); i++){
-//						List<WrappedSummary> partial = partialPermutation.get(i);
-//						List<WrappedSummary> connected = new ArrayList<WrappedSummary>(toValidate.getSummaryList());
-//						connected.addAll(partial);
-//						if(result.esPair.hasExactTheSameExecutionLog(connected)) continue;
-//						EventSummaryPair candidate = new EventSummaryPair(toValidate.getEvent().clone(),connected, result.methodRoots);
-//						if(set.add(candidate)){ permutatedList.add(candidate); }
-//					}
-//					this.newValidationEvent = permutatedList;
-//				}
-//			}
-//		}else{ //less method or mix method
-//			//does not generate any new symbolic esPair
-//			//assume not new method could occur in the list
-//			toValidate.increaseTryCount();
-//			EventSummaryPair actualOne = eventSummaryDeposit.checkAndDeposit(result.esPair);
-//			actualOne.increaseTryCount();
-//			if(actualOne.isConcreateExecuted() == false){
-//				this.model.update(actualOne, result.resultedLayout);
-//				actualOne.setConcreateExecuted();
-//			}
-//			this.lastExecutedEvent = actualOne;
-//			this.currentLayout = lastExecutedEvent.getEvent().getDest();
-//		}
 	}
 
 	@Override
@@ -420,27 +282,32 @@ public class DualDeviceOperation extends AbstractOperation {
 		return result;
 	}
 	
+	public List<List<Event>> getValidatedSequence(){
+		return this.validatedSequence;
+	}
+	
 	@Override
 	public Serializable getDumpData() {
-		ArrayList<Serializable> list = new ArrayList<Serializable>();
+		ArrayList<Object> list = new ArrayList<Object>();
 		list.add(eventDeposit);
 		list.add(eventSummaryDeposit);
 		list.add((HashMap<String,List<WrappedSummary>>)methodSigToSummaries);
 		list.add(WrappedSummary.model_raw);
 		list.add(WrappedSummary.mode_wrap);
-		
+		list.add(validatedSequence);
 		return list;
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
 	public void restore(Object dumped) {
-		ArrayList<Serializable> list = (ArrayList<Serializable>) dumped;
+		ArrayList<Object> list = (ArrayList<Object>) dumped;
 		eventDeposit = (EventDeposit) list.remove(0);
 		eventSummaryDeposit = (EventSummaryDeposit) list.remove(0);
 		methodSigToSummaries = (Map<String, List<WrappedSummary>>) list.remove(0);
 		WrappedSummary.model_raw = (DefaultListModel<PathSummary>)list.remove(0);
 		WrappedSummary.mode_wrap = (DefaultListModel<WrappedSummary>)list.remove(0);
+		validatedSequence = (List<List<Event>>)list.remove(0);
 	}
 	
 	public EventDeposit getEventDeposit(){

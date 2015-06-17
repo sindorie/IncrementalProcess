@@ -29,6 +29,7 @@ import symbolic.Blacklist;
 import symbolic.Expression;
 import symbolic.PathSummary;
 import tools.CoverageStats;
+import components.Event;
 import components.EventDeposit;
 import components.EventDeposit.InternalPair;
 import components.EventSummaryPair;
@@ -38,7 +39,7 @@ import components.WrappedSummary;
 public class Statistic {
 
 	// does not include UIModel now
-	public static void probe(DualDeviceOperation operater, DepthFirstManager manager){
+	public static void probe(ExuectionLoop loop, DualDeviceOperation operater, DepthFirstManager manager){
 		//all possible accessible data
 		manager.getNewEventStack();
 		manager.getValidationQueue();
@@ -60,11 +61,6 @@ public class Statistic {
 		operater.getMethodSigToSummaries();
 		operater.getAllKnownPathSummaries();
 		operater.getAllKnownWrappedSummaries();
-		
-		System.out.println(
-					"Restart times: " + 
-					operater.getEventDeposit().getRecords().size()
-		);
 		
 		int maxLength = -1;
 		for(List<InternalPair> ipList: operater.getEventDeposit().getRecords()){
@@ -141,8 +137,7 @@ public class Statistic {
 		}
 		
 		System.out.println("---------------- Ignored API constraints: "+ignoredMap.size());
-		for (Map.Entry<String, Integer> entry : ignoredMap.entrySet())
-		{
+		for (Map.Entry<String, Integer> entry : ignoredMap.entrySet()){
 			System.out.println("[API Signature]" + entry.getKey() + "\t\t" + entry.getValue());
 		}
 		System.out.println("\n----------------- Bytecode lines hit: "+manager.getAllHitList().size());
@@ -183,9 +178,6 @@ public class Statistic {
 		
 		
 		System.out.println("---------------------------------------");
-		
-		
-
 		DefaultListModel<PathSummary> totalList = operater.getAllKnownPathSummaries();
 		List<PathSummary> concreteList = new ArrayList<PathSummary>();
 		Set<List<String>> executeLogSet =new HashSet<List<String>>();
@@ -224,19 +216,41 @@ public class Statistic {
 		}
 
 		Map<String, String> targetMap = manager.getTargetReachDetail();
-		
-		
 		Set<String> lineHits = manager.getAllHitList();
 		Set<String> allLine = getAllLine(manager.app);
 		Set<String>[] checked = checkLineHit(allLine, lineHits);
+		List<List<Event>> validatedSequence = operater.getValidatedSequence();
+		int maxLengthOfGeneratedSequence = -1;
+		for(List<Event> sequence : validatedSequence){
+			if(sequence == null) continue;
+			if(sequence.size() >= maxLengthOfGeneratedSequence){
+				maxLengthOfGeneratedSequence = sequence.size();
+			}
+		}
 		
-		System.out.println("Path Summary execution (Concrete/All): "+concreteList.size()+"/"+totalList.size());
+		long duration = loop.getDuration();
+		int seconds = (int) (duration / 1000) % 60 ;
+		int minutes = (int) ((duration / (1000*60)) % 60);
+		int hours   = (int) ((duration / (1000*60*60)) % 24);
+		System.out.println( "Total Time: "+
+				((hours==0)?"":(hours+" h, ")) + 
+				((minutes==0)?"":(minutes+" m, ")) +
+				seconds + " s"
+				);
+		
+		System.out.println("Total Lines: "+allLine.size());
 		System.out.println("Recorded hits: "+ lineHits.size());
 		System.out.println("Found in App: "+ checked[0].size());
 		System.out.println("Error recorded: "+checked[1].size());
-		System.out.println("Total Lines: "+allLine.size());
+		System.out.println("Line precentage: "+((checked[0].size()+0.0)/allLine.size()));
+		
+		System.out.println("Path Summary execution (Concrete/All): "+concreteList.size()+"/"+totalList.size());
 		System.out.println("Max sequence length: "+maxSequenceLength);
-		System.out.println("Max generated sequence length: "+maxGeneratedSequenceLength);
+//		System.out.println("Max generated sequence length: "+maxGeneratedSequenceLength);
+		System.out.println("Restart times: "+operater.getEventDeposit().getRecords().size());
+		System.out.println("Amount Validated Sequence: "+validatedSequence.size());
+		System.out.println("Max generated sequence length: "+maxLengthOfGeneratedSequence);
+		System.out.println("Target reached: "+targetMap.size());
 		
 		if(targetMap.size() > 0){
 			for(Entry<String, String> entry : targetMap.entrySet()){
@@ -249,12 +263,6 @@ public class Statistic {
 				}
 			}
 		}
-		
-//		if(checked[1].size() >0){
-//			for(String line : checked[1]){
-//				System.out.println(line);
-//			}
-//		}
 	}
 
 	public static Set<String>[] checkLineHit(Set<String> allLine,

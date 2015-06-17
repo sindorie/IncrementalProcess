@@ -86,20 +86,26 @@ public class EventSummaryPair extends DefaultEdge implements Serializable{
 		}
 	}
 	
-	public boolean hasExactTheSameExecutionLog(List<WrappedSummary> sumList){
-		if(this.summaryList == null && sumList != null) return false;
-		if(this.summaryList == null && sumList == null) return true;
-		if(summaryList.size() != this.summaryList.size()) return false;
-		
-		for(int i =0;i<sumList.size(); i++){
-			WrappedSummary sum1 = this.summaryList.get(i);
-			WrappedSummary sum2 = sumList.get(i);
-			if(sum1 == null && sum2 == null) continue;
-			if(sum1 != null){
-				if(!sum1.equals(sum2)) return false;
+	public boolean hasExactTheSameExecutionLog(List<WrappedSummary> inputList){
+		if(this.summaryList == null){
+			if(inputList == null) return true;
+			else{ return false;}
+		}else{
+			if(inputList == null) return false;
+			else{
+				if(this.summaryList.size() != inputList.size()) return false;
+				
+				for(int i =0;i<inputList.size(); i++){
+					WrappedSummary sum1 = this.summaryList.get(i);
+					WrappedSummary sum2 = inputList.get(i);
+					if(sum1 == null && sum2 == null) continue;
+					if(sum1 != null){
+						if(!sum1.equals(sum2)) return false;
+					}
+				}
+				return true;
 			}
 		}
-		return true;
 	}
 
 	
@@ -116,6 +122,21 @@ public class EventSummaryPair extends DefaultEdge implements Serializable{
 		if(o instanceof EventSummaryPair){
 			EventSummaryPair other = (EventSummaryPair)o; 
 			if(!other.event.equals(this.event)) return false;
+//			if(this.summaryList == null){
+//				if(other.summaryList == null){
+//					return true;
+//				}else{
+//					return false;
+//				}
+//			}else{
+//				if(other.summaryList == null){
+//					return false;
+//				}else{
+//					return other.summaryList.equals(this.summaryList);
+//				}
+//			}
+			
+			
 			if(other.summaryList == null ^ this.summaryList == null) return false;
 			if(other.summaryList != null && !other.summaryList.equals(this.summaryList))  return false;
 			return true;
@@ -184,10 +205,10 @@ public class EventSummaryPair extends DefaultEdge implements Serializable{
 		List<Expression> con = this.getCombinedConstraint();
 		if(con != null){
 			for(Expression expre : con){
-				sb.append(expre.toYicesStatement());
+				sb.append(expre.toYicesStatement()+";");
 			}
 		}
-		return this.event.toString()+"_"+this.event.getSource().toString()+"_";
+		return sb.toString();
 	}
 	
 	public void setConcreateExecuted(){

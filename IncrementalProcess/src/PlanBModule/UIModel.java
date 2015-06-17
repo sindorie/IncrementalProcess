@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import javax.swing.DefaultListModel;
@@ -265,8 +266,16 @@ public class UIModel{
 	 */
 	public List<Event> solveForEvent(EventSummaryPair edge) {
 		Logger.trace(edge);
-		String key = edge.getIdentityString();
+//		String key = edge.getIdentityString();
+		String key = edge.toString();
 		SequenceStatus list = solvedSummaryRecord.get(key);
+		
+		Logger.trace(solvedSummaryRecord.size());
+		for(Entry<String,SequenceStatus> entry: solvedSummaryRecord.entrySet()){
+			Logger.trace(entry);
+		}
+		
+		
 		if(list == null){
 			Logger.trace("Generating (new) for "+edge);
 			AnchorSolver aSolver = new AnchorSolver(this,maxDepth,maxBandWith);
@@ -523,7 +532,10 @@ public class UIModel{
 			int currentVertexAmount = model.getGraph().vertexSet().size();
 			int currentEdgeAmount = model.edgesReference.size();
 			boolean result =  ((currentVertexAmount != lastRecordVertexAmount) || (currentEdgeAmount != lastRecordEdgeAmount));
-			Logger.trace(result);
+			Logger.trace(result+" current vs previous: "+
+					currentVertexAmount+","+currentEdgeAmount+" vs "+
+					lastRecordVertexAmount+","+lastRecordEdgeAmount
+					);
 			return result;
 		}
 		
@@ -550,6 +562,11 @@ public class UIModel{
 		public int remainingSize(){
 			return sequences == null?0:sequences.size();
 		}
+	
+		public String toString(){
+			return lastRecordVertexAmount+","+lastRecordEdgeAmount+" with "+sequences.size()+" & "+sequences.size();
+		}
+	
 	}
 
 	

@@ -57,7 +57,7 @@ public class EventSummaryDeposit implements Serializable{
 			}
 		}
 		list.add(esPair);
-		listModel.addElement(esPair);
+		if(listModel != null) listModel.addElement(esPair);
 		Logger.trace("Added: "+esPair.toString());
 		return esPair;
 	}

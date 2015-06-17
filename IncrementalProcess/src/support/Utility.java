@@ -90,7 +90,7 @@ public class Utility {
 			StringBuilder sb = new StringBuilder();
 			sb.append(collection.get(0));
 			for(int i = 1; i< collection.size() ; i++){
-				sb.append(joiner).append(collection.get(1));
+				sb.append(joiner).append(collection.get(i));
 			}
 			return sb.toString();
 		}

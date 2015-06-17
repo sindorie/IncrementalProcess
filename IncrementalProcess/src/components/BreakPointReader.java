@@ -81,7 +81,8 @@ public class BreakPointReader {
 		stack.push(this.previousMethods.get(0));
 		result.add(executionLog);
 		
-		while(true){			
+		while(true){	
+			
 			try {
 				String line = readLine(stdin);
 				Logger.trace("Read: "+line);
@@ -108,7 +109,6 @@ public class BreakPointReader {
 				lineCount += 1;
 				
 				if(line.contains("Breakpoint hit: ")){
-					line = line.trim();
 //					String threadInfo = line.substring(
 //							line.indexOf(": \"")+3, line.indexOf("\", "));
 //					
@@ -124,7 +124,7 @@ public class BreakPointReader {
 					String threadInfo = chunks[0].substring(chunks[0].indexOf("\""), chunks[0].lastIndexOf("\""));
 					String className = chunks[1].substring(0, chunks[1].lastIndexOf("."));
 					String lineNumber = chunks[2].substring(chunks[2].indexOf("=")+1, chunks[2].indexOf(" "));
-					System.out.println(className+"   "+lineNumber);
+//					System.out.println(className+"   "+lineNumber);
 					int lineInt = -1 ;
 					try{
 						lineInt = Integer.parseInt(lineNumber);
@@ -132,7 +132,7 @@ public class BreakPointReader {
 						
 					}
 					
-					
+					Logger.trace("Added: "+className + ":" + lineNumber);
 					executionLog.add(className + ":" + lineNumber);
 					
 					if (threadInfo.contains("main")){

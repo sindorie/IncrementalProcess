@@ -17,7 +17,7 @@ public class ExuectionLoop implements Runnable{
 	private CheckCallBack callBack;
 	private boolean working = true;
 	private int iterationCount = 0, maxCount = -1;
-	private long startTime = -1, maxTime = -1; 
+	private long startTime = -1, maxTime = -1, endTime = -1;
 //	private String dumpTag;
 	
 	public ExuectionLoop(
@@ -79,15 +79,9 @@ public class ExuectionLoop implements Runnable{
 		operation.onFinish();
 		manager.onFinish();
 		
-		long milliseconds = System.currentTimeMillis() - this.startTime;
-		int seconds = (int) (milliseconds / 1000) % 60 ;
-		int minutes = (int) ((milliseconds / (1000*60)) % 60);
-		int hours   = (int) ((milliseconds / (1000*60*60)) % 24);
-		System.out.println( "Total Time: "+
-				((hours==0)?"":(hours+" h, ")) + 
-				((minutes==0)?"":(minutes+" m, ")) +
-				seconds + " s"
-				);
+		endTime = System.currentTimeMillis();
+		
+
 	}
 
 	public AbstractManager getManager() { return manager; }
@@ -100,6 +94,9 @@ public class ExuectionLoop implements Runnable{
 	public long getStartTime(){ return this.startTime; }
 	public void setMaxIteration(int max){ maxCount = max; }
 	public void setMaxDuration(long maxDuration){this.maxTime = maxDuration;}
+	public long getDuration(){
+		return this.endTime - this.startTime;
+	}
 	
 	public interface CheckCallBack{
 		public boolean onIterationStart(ExuectionLoop loop);

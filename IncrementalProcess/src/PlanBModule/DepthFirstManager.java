@@ -33,6 +33,7 @@ import symbolic.Expression;
 import components.Event;
 import components.EventFactory;
 import components.EventSummaryPair;
+import components.EventSummaryPriorityQueue;
 import components.GraphicalLayout;
 import components.WrappedSummary;
 
@@ -43,7 +44,7 @@ public class DepthFirstManager extends AbstractManager{
 	 */
 	private EventSummaryPair currentESPair;
 	private Stack<Event> newEventStack;
-	private PriorityQueue<EventSummaryPair> validationQueue, targetQueue;
+	private EventSummaryPriorityQueue validationQueue, targetQueue;
 	private List<EventSummaryPair> ignoredList, confirmedList;
 	private CallBack callBack;
 	
@@ -79,7 +80,7 @@ public class DepthFirstManager extends AbstractManager{
 			newEventStack = new Stack<Event>();
 			confirmedList = new ArrayList<EventSummaryPair>();
 			ignoredList = new ArrayList<EventSummaryPair>();
-			targetQueue = new PriorityQueue<EventSummaryPair>(new ESPriority()){
+			targetQueue = new EventSummaryPriorityQueue(){
 				@Override
 				public boolean add(EventSummaryPair esPair){
 					if(esPair.getTryCount() >= maxIndividualValidationTry){
@@ -89,7 +90,7 @@ public class DepthFirstManager extends AbstractManager{
 					return super.add(esPair);
 				}
 			};
-			validationQueue = new PriorityQueue<EventSummaryPair>(new ESPriority()){
+			validationQueue = new EventSummaryPriorityQueue(){
 				@Override
 				public boolean add(EventSummaryPair esPair){
 					if(esPair.getTryCount() >= maxIndividualValidationTry){
@@ -189,7 +190,7 @@ public class DepthFirstManager extends AbstractManager{
 					return super.add(esPair);
 				}
 			};
-			targetQueue = new PriorityQueue<EventSummaryPair>(new ESPriority()){
+			targetQueue = new EventSummaryPriorityQueue(){
 				@Override
 				public boolean add(EventSummaryPair esPair){
 					if(esPair.getTryCount() >= maxIndividualValidationTry){
@@ -205,7 +206,7 @@ public class DepthFirstManager extends AbstractManager{
 					return result;
 				}
 			};
-			validationQueue = new PriorityQueue<EventSummaryPair>(new ESPriority()){
+			validationQueue = new EventSummaryPriorityQueue(){
 				@Override
 				public boolean add(EventSummaryPair esPair){
 					if(esPair.getTryCount() >= maxIndividualValidationTry){
@@ -494,8 +495,8 @@ public class DepthFirstManager extends AbstractManager{
 		Stack<Event> copyStack = new Stack<Event>();
 		copyStack.addAll(newEventStack);
 		list.add(copyStack);
-		list.add(new PriorityQueue<EventSummaryPair>(validationQueue));
-		list.add(new PriorityQueue<EventSummaryPair>(targetQueue));
+		list.add(new EventSummaryPriorityQueue(validationQueue));
+		list.add(new EventSummaryPriorityQueue(targetQueue));
 		list.add(new ArrayList<EventSummaryPair>(ignoredList));
 		list.add(new ArrayList<EventSummaryPair>(confirmedList));
 		list.add(targets);
@@ -519,8 +520,8 @@ public class DepthFirstManager extends AbstractManager{
 	public void restore(Object dumped) {
 		ArrayList<Serializable> list = (ArrayList<Serializable>) dumped;
 		newEventStack = (Stack<Event>) list.remove(0);
-		validationQueue = (PriorityQueue<EventSummaryPair>)list.remove(0);
-		targetQueue = (PriorityQueue<EventSummaryPair>) list.remove(0);
+		validationQueue = (EventSummaryPriorityQueue)list.remove(0);
+		targetQueue = (EventSummaryPriorityQueue) list.remove(0);
 		
 		ignoredList = (List<EventSummaryPair>) list.remove(0);
 		confirmedList = (List<EventSummaryPair>) list.remove(0);
@@ -544,11 +545,11 @@ public class DepthFirstManager extends AbstractManager{
 		return newEventStack;
 	}
 
-	public PriorityQueue<EventSummaryPair> getValidationQueue() {
+	public EventSummaryPriorityQueue getValidationQueue() {
 		return validationQueue;
 	}
 
-	public PriorityQueue<EventSummaryPair> getTargetQueue() {
+	public EventSummaryPriorityQueue getTargetQueue() {
 		return targetQueue;
 	}
 
@@ -729,4 +730,7 @@ public class DepthFirstManager extends AbstractManager{
 		 */
 		public void check(List<Event> newEvents, List<EventSummaryPair> list, Set<String> log, EventSummaryPair executed);
 	}
+	
+	
+	
 }

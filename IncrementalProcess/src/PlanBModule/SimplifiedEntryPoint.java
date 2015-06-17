@@ -53,36 +53,24 @@ public class SimplifiedEntryPoint {
 	
 	static String path = "";
 	static String[] targets = {};
+	static String[] deviceId = null;
 	
 	public static void main(String[] args) {
 		SymbolicExecution.useAPIModels = true;
 		boolean checkPrevious = false;
 		String inputFile = 
-				"input/dragon_api2.txt"
+//				"input/wordHelper.txt"
+//				"input/passwordSaver.txt"
+//				"input/smsbackup.txt"
+//				"input/sourceViewer.txt"
+				"input/MorseCode.txt"
+				
+//				"input/Dragon3D.txt"
 //				"input/tiptiper.txt"
-//				"input/smsbackup.txt";
-//				"input/dragon_comp.txt";
-//				"input/dragon.txt";
-		
 		;
 		
-		
-		
-//		String path = "/home/zhenxu/workspace/AndroidTestAPKPlayGround/APAC_engagement/com.url.sourceviewer.apk";
-//		String[] targets = {
-////				 "com.example.dragon.MainActivity$3:48",//   B2
-////				 "com.example.dragon.MainActivity$4:60",//   (B6,B3)
-////				 "com.example.dragon.MainActivity$6:84",//   (B8,B5)
-////				 "com.example.dragon.MainActivity$8:105",//  (Launch, init, B7)
-////				 "com.example.dragon.MainActivity:135",//   (B8, B2)
-////				 "com.example.dragon.SecondLayout:91",// (Connector, Bc, Bb)
-////				 "com.example.dragon.SecondLayout:77",//  (B8, B1, B6, Connector, Bb, Bb)
-//		};
-		
-		
-		readFile(inputFile);
+		readFileInput(inputFile);
 		System.out.println("Path: "+path);
-		
 		
 		//Be sure to unlock screen on the virual device
 		SimplifiedEntryPoint entry = new SimplifiedEntryPoint(path);
@@ -94,34 +82,41 @@ public class SimplifiedEntryPoint {
 			}
 		}else{ 
 			System.out.println("Start test");
-			String[] serials = getDeviceId();
-			if(serials == null){ System.out.println("Need two serial devices"); return;
-			}else{ System.out.println("Serial: "+Arrays.toString(serials)); }
-			entry.startTest(targets, serials);
+			if(deviceId == null){
+				String[] serials = getDeviceId();
+				if(serials == null){ System.out.println("Need two serial devices"); return;
+				}else{ System.out.println("Serial: "+Arrays.toString(serials)); }
+				deviceId = serials;
+			}
+			entry.startTest(targets, deviceId);
 		}
 		
-		Statistic.probe(entry.operater, entry.manager);
+		Statistic.probe(entry.loop, entry.operater, entry.manager);
 	}
 	
-	static void readFile(String fileName){
+	static void readFileInput(String fileName){
 		File f = new File(fileName);
 		if(f.exists() && f.isFile()){
 			BufferedReader bfr = null;
 			try {
 				bfr = new BufferedReader(new FileReader(f));
 				String line = null;
-				int i =0;
+				int lineIndex =0; //non empty line index
 				List<String> buf = new ArrayList<String>();
 				while((line = bfr.readLine()) != null){
 					line = line.replaceAll("[\",]", "").trim();
 					if(line.isEmpty()) continue;
-					if( i == 0){
-						path = line;
-						i += 1;
+					if(line.startsWith("devices: ")){
+						//specify the devices needed for testing
+						String parts[] = line.replace("devices:", ",").replace(" ", "").split(" ");
+						if(parts == null || parts.length < 2) continue;
+						else deviceId = parts;
 					}else{
-						buf.add(line);
-						i += 1;
+						line = line.replace("\\", ".");
+						if( lineIndex == 0){ path = line;
+						}else{ buf.add(line); }
 					}
+					lineIndex += 1;
 				}
 				targets = buf.toArray(new String[0]);
 			} catch (FileNotFoundException e) {
@@ -257,10 +252,10 @@ public class SimplifiedEntryPoint {
 			Logger.ConsoleLogger.addLocalFilter(new InformationFilter(){
 				String filterList = 
 						  "components.ViewDeviceInfo "
-//						+ "support.CommandLine "
+						+ "support.CommandLine "
 						+ "components.system.WindowOverview "
 //						+ "components.Executer "
-//						+ "components.BreakPointReader "
+						+ "components.BreakPointReader "
 						+ "components.EventDeposit"
 //						+ "PlanBModule.AnchorSolver"
 						+ "components.solver.YicesProcessInterface"

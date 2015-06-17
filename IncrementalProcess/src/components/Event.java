@@ -58,8 +58,7 @@ public class Event extends DefaultEdge implements Serializable{
 			Event input = (Event)other;
 			//since the destination and source is now shown in the toString method-*
 			if(!this.toString().equals(input.toString())){ return false; }
-			if(this.source.equals(input.source)) { return false; }
-			
+			if(!this.source.equals(input.source)) { return false; }
 			if(this.dest == null){  if(input.dest != null) return false;
 			}else{  if(!this.dest.equals(input.dest)) return false;  }
 			return true;
