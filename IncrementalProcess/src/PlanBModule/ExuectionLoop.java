@@ -73,8 +73,8 @@ public class ExuectionLoop implements Runnable{
 					break;
 				}
 			}
-		}catch(Exception e1){ e1.printStackTrace();
-		}catch(Error e){ e.printStackTrace(); }
+		}catch(Exception e1){ e1.printStackTrace();Logger.trace(e1.getMessage());
+		}catch(Error e){ e.printStackTrace();Logger.trace(e.getMessage()); }
 		
 		operation.onFinish();
 		manager.onFinish();
