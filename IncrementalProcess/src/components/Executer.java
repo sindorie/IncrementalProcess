@@ -38,7 +38,7 @@ public class Executer {
 		case EventFactory.iLAUNCH:{
 			String packageName = (String) event.getAttribute(EventFactory.pkgName);
 			String actName = (String) event.getAttribute(EventFactory.actName);
-			String shellCommand = "am start -f 32768 -W -n " + packageName + "/" + actName;
+			String shellCommand = "am start " + packageName + "/" + actName;
 			CommandLine.executeShellCommand(shellCommand, serial);
 			Logger.trace(CommandLine.getLatestStdoutMessage());
 			Logger.trace(CommandLine.getLatestStdoutMessage());
