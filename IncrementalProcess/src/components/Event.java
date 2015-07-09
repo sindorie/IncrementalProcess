@@ -91,6 +91,9 @@ public class Event extends DefaultEdge implements Serializable{
 			result = typename + " "+this.getAttribute(EventFactory.xCoordinate)+","+this.getAttribute(EventFactory.yCoordinate);
 			break;
 		}
+		case EventFactory.iINPUT:			{
+//			result = typeNam
+		}
 		case EventFactory.iUNDEFINED:	{
 			result = typename; 
 			break;

@@ -3,8 +3,8 @@ package PlanBModule;
 import java.io.File;
 import java.io.Serializable;
 
+import PlanBModule.DepthFirstManager.Decision;
 import main.Paths;
-import PlanBModule.AbstractManager.Decision;
 import support.Logger;
 import support.Utility;
 import components.Event;
@@ -12,7 +12,7 @@ import components.EventSummaryPair;
 
 public class ExuectionLoop implements Runnable{
 	private UIModel model;
-	private AbstractManager manager;
+	private DepthFirstManager manager;
 	private AbstractOperation operation;
 	private CheckCallBack callBack;
 	private boolean working = true;
@@ -21,8 +21,8 @@ public class ExuectionLoop implements Runnable{
 //	private String dumpTag;
 	
 	public ExuectionLoop(
-			AbstractManager manager, 
-			AbstractOperation operation,
+			DepthFirstManager manager, 
+			DualDeviceOperation operation,
 			UIModel model ){
 		this.manager = manager;
 		this.operation = operation;
@@ -84,7 +84,7 @@ public class ExuectionLoop implements Runnable{
 
 	}
 
-	public AbstractManager getManager() { return manager; }
+	public DepthFirstManager getManager() { return manager; }
 	public AbstractOperation getOperation() { return operation; }
 	public UIModel getModel() { return model; }
 	public boolean isWorking() { return working; }

@@ -9,6 +9,7 @@ public class EventFactory {
 	public static final String keyCode = "event_keycode";
 	public static final String xCoordinate = "event_clickx";
 	public static final String yCoordinate = "event_clicky";
+	public static final String textInput = "event_input";
 	
 	public static final long NON_SLEEP = 0, LAUNCH_SLEEP = 2000;
 	public static final long RESTART_SLEEP = 2000,  REINSTALL_SLEEP = 2000;
@@ -17,11 +18,14 @@ public class EventFactory {
 	public final static String UNDEFINED = "undefined";//, EMPTY = "empty", UPDATE = "update";
 	public final static String LAUNCH = "launch", REINSTALL = "reinstall" ; //, RESTART = "restart";
 	public final static String PRESS = "press", ONCLICK = "android:onClick";
+	public final static String TEXT_INPUT = "text input";
 	
 	public final static int iUNDEFINED = -1;//, iEMPTY = -3, iUPDATE = -2;
 	public final static int iLAUNCH = 0, iREINSTALL = 2, iPRESS = 3, iONCLICK = 4;//, iRESTART = 1;
+	public final static int iINPUT = 5;
 	
 	private EventFactory(){}
+	
 	
 	public static Event createReinstallEvent(String pkgName, String path){
 		Event e = new Event();
@@ -41,8 +45,31 @@ public class EventFactory {
 		return e;
 	}
 	
+	public static Event createTextEvet(GraphicalLayout source, int x, int y, String text){
+		Event e = new Event();
+		e.source = source;
+		e.eventType = iINPUT;
+		e.putAttribute(EventFactory.xCoordinate, x);
+		e.putAttribute(EventFactory.yCoordinate, y);
+		e.putAttribute(EventFactory.textInput, text);
+		return e;
+	}
+	
+	public static Event createTextEvet(Event clickEvent, String text){
+		Event e = clickEvent.clone();
+		e.eventType = iINPUT;
+		e.putAttribute(EventFactory.textInput, text);
+		return e;
+	}
+	
+	
+	
+	public static Event createTextEvet(GraphicalLayout source, LayoutNode node, String text){
+		return createTextEvet(source, (node.startx+node.endx)/2,
+				(node.starty+node.endy)/2,text );
+	}
 	public static Event createClickEvent(GraphicalLayout source, LayoutNode node){
-		System.out.println(node.className+" - "+node.id+" - "+node.startx+","+node.endx+", "+node.starty+","+node.endy);
+//		System.out.println(node.className+" - "+node.id+" - "+node.startx+","+node.endx+", "+node.starty+","+node.endy);
 		
 		return createClickEvent(source, (node.startx+node.endx)/2,
 				(node.starty+node.endy)/2 );
@@ -86,6 +113,8 @@ public class EventFactory {
 			return iPRESS;
 		}else if(eventString.equals(ONCLICK)){
 			return iONCLICK;
+		}else if(eventString.equals(TEXT_INPUT)){
+			return iINPUT;
 		}else return iUNDEFINED;
 	}
 	
@@ -105,6 +134,7 @@ public class EventFactory {
 		case iREINSTALL: return REINSTALL;
 		case iPRESS: 	return PRESS;
 		case iONCLICK: 	return ONCLICK;
+		case iINPUT:	return TEXT_INPUT;
 		}
 		return UNDEFINED;
 	}

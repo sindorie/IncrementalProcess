@@ -598,6 +598,13 @@ public class DualDeviceOperation extends AbstractOperation {
 		if (inputMethodVisible) { 
 			try { Thread.sleep(closeKeyboardSleep); } catch (InterruptedException e) { }
 			this.viewDeviceExecuter.applyEvent(closeKeyboardEvent);
+			
+			Event textInputEvent = EventFactory.createTextEvet(event, "Hello");
+			GraphicalLayout source = event.getSource();
+			if(!source.candidates.contains(textInputEvent)){
+				source.candidates.add(textInputEvent);
+				this.manager.getNewEventStack().add(textInputEvent);
+			}
 		}
 		
 		switch (scope) {

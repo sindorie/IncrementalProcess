@@ -105,8 +105,6 @@ public class EntryPoint {
 		for(Entry<String,Set<String>>  missed : clsLineMis.entrySet()){
 			System.out.println(String.join("\n", missed.getValue()));
 		}
-		
-		
 		for(Entry<String,Set<String>>  missed : clsLineMis.entrySet()){
 			totalMiseed += missed.getValue().size();
 			System.out.println(missed.getKey()+" missed line amount: "+missed.getValue().size());

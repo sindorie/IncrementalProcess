@@ -93,6 +93,28 @@ public class Executer {
 			Logger.trace(CommandLine.getLatestStdoutMessage());
 			if(deposit != null){  deposit.addEvent(event); }
 		}break;
+		case EventFactory.iINPUT:{
+			//first click (focus), then input text
+			String x = event.getAttribute(EventFactory.xCoordinate).toString();
+			String y = event.getAttribute(EventFactory.yCoordinate).toString();
+			int iX = Integer.parseInt(x);
+			int iY = Integer.parseInt(y);
+			if(corrdinatesRatio != null){
+				iX = (int) (corrdinatesRatio[0] * iX);
+				iY = (int) (corrdinatesRatio[0] * iY);
+			}
+			String inputCommand = "input tap " + iX + " " + iY;
+			CommandLine.executeShellCommand(inputCommand, serial);
+			Logger.trace(CommandLine.getLatestStdoutMessage());
+			Logger.trace(CommandLine.getLatestStdoutMessage());
+			
+			String text = event.getAttribute(EventFactory.textInput).toString();
+			String textCommand = "input text "+ text;
+			CommandLine.executeShellCommand(textCommand, serial);
+			Logger.trace(CommandLine.getLatestStdoutMessage());
+			Logger.trace(CommandLine.getLatestStdoutMessage());
+			
+		}break;
 		case EventFactory.iUNDEFINED:
 		default: throw new IllegalArgumentException();
 		}

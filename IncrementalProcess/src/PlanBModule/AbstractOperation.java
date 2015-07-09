@@ -11,7 +11,7 @@ import components.EventSummaryPair;
 public abstract class AbstractOperation {
 	protected StaticApp app;
 	protected UIModel model;
-	protected AbstractManager manager;
+	protected DepthFirstManager manager;
 	
 	/**
 	 * @param app -- the application under testing
@@ -77,7 +77,7 @@ public abstract class AbstractOperation {
 	
 	public abstract Set<String> getLatestLineHit();
 	
-	public void setManager(AbstractManager manager){
+	public void setManager(DepthFirstManager manager){
 		this.manager = manager;
 	}
 	

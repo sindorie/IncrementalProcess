@@ -37,7 +37,11 @@ import components.EventSummaryPriorityQueue;
 import components.GraphicalLayout;
 import components.WrappedSummary;
 
-public class DepthFirstManager extends AbstractManager{
+public class DepthFirstManager{ // extends AbstractManager
+	
+	protected StaticApp app;
+	protected UIModel model;
+	protected AbstractOperation operater;
 	
 	/* 
 	 * Operation field
@@ -74,14 +78,15 @@ public class DepthFirstManager extends AbstractManager{
 	
 	
 	public DepthFirstManager(StaticApp app, UIModel model){
-		super(app, model);
+		this.app = app;
+		this.model = model;
 		
 		if(!enableGUI){
 			newEventStack = new Stack<Event>();
 			confirmedList = new ArrayList<EventSummaryPair>();
 			ignoredList = new ArrayList<EventSummaryPair>();
 			targetQueue = new EventSummaryPriorityQueue(){
-				@Override
+				
 				public boolean add(EventSummaryPair esPair){
 					if(esPair.getTryCount() >= maxIndividualValidationTry){
 						ignoredList.add(esPair);
@@ -91,7 +96,7 @@ public class DepthFirstManager extends AbstractManager{
 				}
 			};
 			validationQueue = new EventSummaryPriorityQueue(){
-				@Override
+				
 				public boolean add(EventSummaryPair esPair){
 					if(esPair.getTryCount() >= maxIndividualValidationTry){
 						ignoredList.add(esPair);
@@ -129,7 +134,7 @@ public class DepthFirstManager extends AbstractManager{
 			
 			Logger.registerJPanel("Manager status", pane);			
 			newEventStack = new Stack<Event>(){
-				@Override
+				
 				public Event pop(){
 					newEventModel.removeRow(0);
 					Event result = super.pop();
@@ -137,7 +142,7 @@ public class DepthFirstManager extends AbstractManager{
 					return result;
 				}
 				
-				@Override
+				
 				public Event push(Event event){
 					newEventModel.insertRow(0, event.toStringArray());
 					return super.push(event);
@@ -177,21 +182,21 @@ public class DepthFirstManager extends AbstractManager{
 			queuePane.add(ignoedContainer);
 			
 			confirmedList = new ArrayList<EventSummaryPair>(){
-				@Override
+				
 				public boolean add(EventSummaryPair esPair){
 					confirmArea.append(esPair.toString()+"\n");
 					return super.add(esPair);
 				}
 			};
 			ignoredList = new ArrayList<EventSummaryPair>(){
-				@Override
+				
 				public boolean add(EventSummaryPair esPair){
 					ignoreArea.append(esPair.toString()+"\n");
 					return super.add(esPair);
 				}
 			};
 			targetQueue = new EventSummaryPriorityQueue(){
-				@Override
+				
 				public boolean add(EventSummaryPair esPair){
 					if(esPair.getTryCount() >= maxIndividualValidationTry){
 						ignoredList.add(esPair);
@@ -199,7 +204,7 @@ public class DepthFirstManager extends AbstractManager{
 					updateTargetQueuePane();
 					return true;
 				}
-				@Override
+				
 				public EventSummaryPair poll(){
 					EventSummaryPair result = super.poll();
 					updateTargetQueuePane();
@@ -207,7 +212,7 @@ public class DepthFirstManager extends AbstractManager{
 				}
 			};
 			validationQueue = new EventSummaryPriorityQueue(){
-				@Override
+				
 				public boolean add(EventSummaryPair esPair){
 					if(esPair.getTryCount() >= maxIndividualValidationTry){
 						ignoredList.add(esPair);
@@ -215,7 +220,7 @@ public class DepthFirstManager extends AbstractManager{
 					updateValidationPane();
 					return true;
 				}
-				@Override
+				
 				public EventSummaryPair poll(){
 					EventSummaryPair result = super.poll();
 					updateValidationPane();
@@ -230,7 +235,7 @@ public class DepthFirstManager extends AbstractManager{
 			classCatergoryPane = new HashMap<String, JTextArea>();
 			
 			lineHit = new HashSet<String>(){
-				@Override
+				
 				public boolean add(String line){
 					boolean isAdded = super.add(line);
 					if(isAdded){
@@ -251,6 +256,10 @@ public class DepthFirstManager extends AbstractManager{
 			};
 			Logger.registerJPanel("Line hit", lineHitPane);
 		}
+	}
+	
+	void setOperater(DualDeviceOperation operation){
+		this.operater = operation;
 	}
 	
 	/**
@@ -284,7 +293,7 @@ public class DepthFirstManager extends AbstractManager{
 		}
 	}
 	
-	@Override
+//	
 	public void onPreparation() {
 		String mainAct = app.getMainActivity().getJavaName();
 		String pkgName = app.getPackageName();	
@@ -295,8 +304,9 @@ public class DepthFirstManager extends AbstractManager{
 		
 		iterationCount =0;
 	}
-	@Override public void onIterationStepStart() { currentESPair = null; }
-	@Override
+	//
+	public void onIterationStepStart() { currentESPair = null; }
+	
 	public Decision decideOperation() {
 		if(isLimitReached()){
 			Logger.trace("Limit reached: "+
@@ -317,27 +327,27 @@ public class DepthFirstManager extends AbstractManager{
 	}
 	
 	/**Exploration Mode**/
-	@Override public void onExplorationStepStart() { }
-	@Override public Event getNextExplorationEvent(){ return this.newEventStack.pop(); }
-	@Override public void onExplorationStepEnd() {  }
+	public void onExplorationStepStart() { }
+	public Event getNextExplorationEvent(){ return this.newEventStack.pop(); }
+	public void onExplorationStepEnd() {  }
 
 	/**Expansion mode**/
-	@Override public void onExpansionStepStart() {  }
-	@Override public EventSummaryPair getNextExpansionEvent() { 
+	public void onExpansionStepStart() {  }
+	public EventSummaryPair getNextExpansionEvent() { 
 		currentESPair = validationQueue.poll();  
 		return this.currentESPair;
 	}
-	@Override public void onExpansionStepEnd() {}
+	public void onExpansionStepEnd() {}
 
 	/**Reach target mode**/
-	@Override public void onReachTargetStart() {}
-	@Override public EventSummaryPair getNextTargetSummary() { 
+	public void onReachTargetStart() {}
+	public EventSummaryPair getNextTargetSummary() { 
 		currentESPair =  targetQueue.poll(); 
 		return this.currentESPair;
 	}	
-	@Override public void onReachTargetEnd() { Logger.trace(); }
+	public void onReachTargetEnd() { Logger.trace(); }
 	
-	@Override
+	
 	public void onIterationStepEnd() {
 		// Check from the UI model if there is any new event.
 		List<Event> newEvents = this.model.getAdditionalEvent();
@@ -446,7 +456,7 @@ public class DepthFirstManager extends AbstractManager{
 		iterationCount+= 1;
 	}
 	
-	@Override 
+	
 	public void onFinish() { 
 		for(Entry<String,Boolean> entry : this.reachedTargets.entrySet()){
 			String line = entry.getKey();
@@ -489,7 +499,7 @@ public class DepthFirstManager extends AbstractManager{
 		return map;
 	}
 
-	@Override
+	
 	public Serializable getDumpData() {
 		ArrayList<Object> list = new ArrayList<Object>();
 		Stack<Event> copyStack = new Stack<Event>();
@@ -516,7 +526,7 @@ public class DepthFirstManager extends AbstractManager{
 	}
 
 	@SuppressWarnings("unchecked")
-	@Override
+	
 	public void restore(Object dumped) {
 		ArrayList<Serializable> list = (ArrayList<Serializable>) dumped;
 		newEventStack = (Stack<Event>) list.remove(0);
@@ -593,7 +603,7 @@ public class DepthFirstManager extends AbstractManager{
 		return validArea;
 	}
 
-	@Override
+	
 	public Set<String> getAllHitList() {
 		return this.lineHit;
 	}
@@ -732,5 +742,7 @@ public class DepthFirstManager extends AbstractManager{
 	}
 	
 	
-	
+	public enum Decision{
+		EXPLORE, EXPAND, REACHTARGET, END;
+	}
 }

@@ -375,27 +375,6 @@ public class UIModel{
 		return newLay;
 	}
 	
-//	public GraphicalLayout findLayout(String actName, LayoutNode node){
-//		List<GraphicalLayout> layList = actLayouts.get(actName);
-//		for(GraphicalLayout lay : layList){
-//			if(lay.hasTheSmaeLayout(node)){
-//				return lay;
-//			}
-//		}
-//		return null;
-//	}
-	
-//	public GraphicalLayout findSameOrAddLayout(GraphicalLayout layout){
-//		List<GraphicalLayout> layList = actLayouts.get(layout.getActName());
-//		if(layList != null){
-//			for(GraphicalLayout lay: layList){
-//				if(lay.equals(layout)) return lay; //It is in the encountered one
-//			}
-//		}
-//		this.onNewLayoutHelper(layout);
-//		return layout;
-//	}
-	
 	public void setMaxSolveDimension(int maxDepth, int maxBandwith){
 		this.maxDepth = maxDepth;
 		this.maxBandWith = maxBandwith;
@@ -479,6 +458,7 @@ public class UIModel{
 				}
 			});
 			eventBuffer = toAdd;
+			layout.candidates.addAll(eventBuffer);
 			Logger.trace(toAdd);
 		}else{
 			Logger.info("Max amount of layouts reached");

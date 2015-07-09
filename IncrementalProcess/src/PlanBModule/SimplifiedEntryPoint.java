@@ -38,7 +38,7 @@ import components.WrappedSummary;
 import components.system.Configuration;
 
 public class SimplifiedEntryPoint {
-	boolean force = true;
+	boolean force = false;
 	int maxIteration = 2000;
 	long maxTime = TimeUnit.MINUTES.toMillis(120);
 	int maxValidationTry = 20;
@@ -59,14 +59,10 @@ public class SimplifiedEntryPoint {
 		SymbolicExecution.useAPIModels = true;
 		boolean checkPrevious = false;
 		String inputFile = 
-//				"input/wordHelper.txt"
-//				"input/passwordSaver.txt"
-//				"input/smsbackup.txt"
-//				"input/sourceViewer.txt"
-				"input/MorseCode.txt"
+//				"input/connectBot_test1"
+//				"input/connectBot_test2"
+				"input/general.txt"
 				
-//				"input/Dragon3D.txt"
-//				"input/tiptiper.txt"
 		;
 		
 		readFileInput(inputFile);
