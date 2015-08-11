@@ -138,7 +138,7 @@ public class ExpressionTranfomator {
 	private static Expression recursiveTransform(Expression input){
 		String content = input.getContent();
 		if(content.equalsIgnoreCase(FSTATIC)){
-			Expression child = (Expression) input.getChildAt(0);
+			Expression child = (Expression) input.getChildAt(0);	
 			String childContent = child.getContent();
 			String[] parts = childContent.split(":");
 			if(parts.length <2) return null;

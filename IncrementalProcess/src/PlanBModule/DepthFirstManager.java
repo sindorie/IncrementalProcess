@@ -295,6 +295,10 @@ public class DepthFirstManager{ // extends AbstractManager
 	
 //	
 	public void onPreparation() {
+		if(app.getMainActivity() == null || app.getMainActivity().getJavaName() == null){
+			System.out.println("Static Analysis fails to identify the main Activity. Aborting...");
+			throw new AssertionError();
+		}
 		String mainAct = app.getMainActivity().getJavaName();
 		String pkgName = app.getPackageName();	
 		this.model.defineRoot(GraphicalLayout.Launcher);

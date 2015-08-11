@@ -14,9 +14,33 @@ public class ShowcaseEntryPoint {
 			int i = 0;
 			@Override
 			public Object solve(List<Expression> constraints, List<Expression> symbolics) {
-				return "Just a test #"+(i++);
+				StringBuilder sb = new StringBuilder();
+				sb.append("Just a test #"+(i++));
+				for(Expression expre : constraints){
+					sb.append(treeToText(expre, 0));
+					sb.append("\n");
+				}
+				
+				sb.append("\n\n");
+				
+				for(Expression expre : symbolics){
+					sb.append(treeToText(expre, 0));
+					sb.append("\n");
+				}
+				return sb.toString();
 			}
 			
+			private String treeToText(Expression node, int level){
+				StringBuilder sb = new StringBuilder();
+				for(int i =0;i<level;i++){
+					sb.append("    ");
+				}
+				sb.append(node.getContent()).append("\n");
+				for(int i =0 ;i<node.getChildCount(); i ++){
+					sb.append(treeToText((Expression)node.getChildAt(i),level+1));
+				}
+				return sb.toString();
+			}
 		};
 		Showcase showcase = new Showcase();
 		showcase.addTester(solver);
