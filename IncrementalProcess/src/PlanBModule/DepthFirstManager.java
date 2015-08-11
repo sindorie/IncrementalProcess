@@ -483,7 +483,13 @@ public class DepthFirstManager{ // extends AbstractManager
 					String[] lines = area.getText().split("\n");
 					if(lines!=null && lines.length > 0){
 						Arrays.sort(lines);
-						area.setText(String.join("\n", lines));
+						//joins
+						StringBuilder sb = new StringBuilder();
+						sb.append(lines[0]);
+						for(int i = 1 ;i<lines.length ; i++){
+							sb.append("\n").append(lines[i]);
+						}
+						area.setText(sb.toString());
 					}
 				}
 			}
